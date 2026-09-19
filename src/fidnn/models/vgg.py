@@ -1,8 +1,8 @@
-"""VGG-11-BN for CIFAR-10 (M3), no skip connections."""
+"""VGG-11-BN for CIFAR-10 (M3), no skip connections; matches the pinned reference (models/README.md)."""
 
 from collections import OrderedDict
 
-import torch.nn as nn
+from torch import nn
 
 from fidnn.models.common import Tap
 
@@ -17,7 +17,7 @@ class VGG11BN(nn.Module):
         for b, block in enumerate(CFG, start=1):
             layers = OrderedDict()
             for k, cout in enumerate(block, start=1):
-                layers[f"conv{k}"] = nn.Conv2d(cin, cout, 3, 1, 1, bias=False)
+                layers[f"conv{k}"] = nn.Conv2d(cin, cout, 3, 1, 1)
                 layers[f"bn{k}"] = nn.BatchNorm2d(cout)
                 layers[f"relu{k}"] = nn.ReLU()
                 layers[f"tap{k}"] = Tap()
@@ -25,20 +25,30 @@ class VGG11BN(nn.Module):
             layers["pool"] = nn.MaxPool2d(2)
             layers["tap_out"] = Tap()
             setattr(self, f"block{b}", nn.Sequential(layers))
-        self.pool = nn.AdaptiveAvgPool2d(1)
         self.flatten = nn.Flatten()
         self.tap_pooled = Tap()
-        self.fc = nn.Linear(512, num_classes)
+        self.classifier = nn.Sequential(
+            nn.Linear(512, 512), nn.ReLU(), nn.Dropout(),
+            nn.Linear(512, 512), nn.ReLU(), nn.Dropout(),
+            nn.Linear(512, num_classes),
+        )
         self.tap_logits = Tap()
         for m in self.modules():
-            if isinstance(m, (nn.Conv2d, nn.Linear)):
-                nn.init.kaiming_normal_(m.weight)
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight, mode="fan_out", nonlinearity="relu")
+                nn.init.zeros_(m.bias)
+            elif isinstance(m, nn.BatchNorm2d):
+                nn.init.ones_(m.weight)
+                nn.init.zeros_(m.bias)
+            elif isinstance(m, nn.Linear):
+                nn.init.normal_(m.weight, 0, 0.01)
+                nn.init.zeros_(m.bias)
 
     def forward(self, x):
         for b in range(1, 6):
             x = getattr(self, f"block{b}")(x)
-        x = self.tap_pooled(self.flatten(self.pool(x)))
-        return self.tap_logits(self.fc(x))
+        x = self.tap_pooled(self.flatten(x))  # spatial size is 1×1 after five 2× pools
+        return self.tap_logits(self.classifier(x))
 
 
 def vgg11_bn(num_classes: int = 10) -> VGG11BN:

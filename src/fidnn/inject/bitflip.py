@@ -5,7 +5,7 @@ from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 
 def _mask(bit: int, width: int) -> int:

@@ -3,7 +3,7 @@
 from collections.abc import Callable
 from dataclasses import dataclass
 
-import torch.nn as nn
+from torch import nn
 
 from fidnn.models.resnet_cifar import resnet8, resnet20
 from fidnn.models.vgg import vgg11_bn

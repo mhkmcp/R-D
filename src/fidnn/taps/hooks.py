@@ -3,7 +3,7 @@
 from collections.abc import Sequence
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 from fidnn.taps.features import tap_features
 from fidnn.taps.registry import TapInfo
