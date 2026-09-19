@@ -1,0 +1,6 @@
+# SPEC §3.2. Raw data lives in data/ (git-ignored); prepared splits and stats in artifacts/data/.
+root: data/cifar10
+split_seed: 0
+train_fraction: 0.8          # classifier `train` (40k) of the 50k Kaggle training images
+fractions: [0.6, 0.2, 0.2]   # clean_fit / clean_cal / clean_test of the other 10k
+label_check_n: 5000          # sampled Kaggle images checked against canonical train labels
