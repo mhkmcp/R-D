@@ -1,13 +1,4 @@
-"""M-0 budget ledger: SPEC workload × measured unit costs → wall-clock hours (SPEC §4.2, §3.3, §12).
-
-A `Plan` is the set of knobs the SPEC allows to move. Everything else in the grid — bit strata,
-fault modes, flip budgets, both tracks, M2's INT8 arm — is not a field of `Plan` at all, so no
-cut can reach it. Workload volumes the SPEC does not pin are named in `Assumptions` and printed
-in the report, so each line of the ledger can be challenged and recomputed.
-
-Reporting-device policy (§11.3): every fault/clean/CIFAR-10-C extraction, attack and overhead
-line is costed on **CPU**. Model training is costed on the device named in `Assumptions`.
-"""
+"""M-0 budget ledger: SPEC workload × measured unit costs → hours (SPEC §4.2, §3.3, §12)."""
 
 from dataclasses import dataclass, field, replace
 
@@ -34,10 +25,10 @@ class Assumptions:
     # data volumes (§3.2, §9.6(8))
     clean_images: int = 60_000       # 50k Kaggle train (fit/cal/test) + 10k canonical probe pool
     cifar10c_images: int = 750_000   # 15 types × 5 severities × 10k
-    # M-1 training — not pinned by SPEC; He et al. schedule ≈ 164 epochs, VGG commonly 200
-    train_images: int = 50_000
+    # M-1 training: `train` split (SPEC §3.2); epochs from configs/model/*.yaml
+    train_images: int = 40_000
     train_batch: int = 128
-    epochs: dict = field(default_factory=lambda: {"m1": 30, "m2": 200, "m3": 200})
+    epochs: dict = field(default_factory=lambda: {"m1": 30, "m2": 164, "m3": 200})
     train_device: str = "mps"
     # L1 BFA (§2, §6.4): per (model, precision, seed)
     l1_attacks: int = 100
@@ -47,7 +38,7 @@ class Assumptions:
     # detectors (§6.3, §9.6)
     hp_grid: int = 35                # 5 ν × 7 γ
     ablation_fits: int = 110         # K sweep ≈ 91 greedy fits + blocks 6 + position 4 + kernel 3 + budget 4
-    svdd_n: int = 30_000             # clean_fit size
+    svdd_n: int = 6_000              # clean_fit size (SPEC §3.2)
     # M-6 overhead study: 3 detector variants × K ∈ 1..K_ext × batch {1,32} × 3 device/precision arms
     overhead_runs: int = 1000
     overhead_variants: int = 3
@@ -55,6 +46,9 @@ class Assumptions:
     m1_reps: int = 10
     # orchestration, data loading, parquet I/O, reruns — applied to every line
     slack: float = 1.5
+
+
+DEFAULTS = Assumptions()
 
 
 @dataclass(frozen=True)
@@ -88,7 +82,7 @@ CUTS = [  # §4.2 / §13 cut order, applied only after all reinvestments are alr
 
 
 class Measurements:
-    """Unit costs (seconds) looked up from the M-0 parquet tables."""
+    """Unit costs in seconds, from the M-0 parquet tables."""
 
     def __init__(self, inference: pd.DataFrame, grad: pd.DataFrame, injection: pd.DataFrame,
                  svdd: pd.DataFrame):
@@ -123,8 +117,7 @@ class Measurements:
         return q.layer.nunique()
 
     def svdd_fit(self, d: int, n: int) -> float:
-        """Mean exact-OCSVM fit time over the measured ν span, pessimistic data shape,
-        interpolated in d and extrapolated as n² beyond the largest measured n."""
+        """Mean fit time over ν on `heavy` data; linear in d, n² beyond the largest measured n."""
         s = self.svdd[(self.svdd.method == "ocsvm_exact") & (self.svdd.data == "heavy")]
         measured = sorted(s.n.unique())
         n_ref = next((x for x in measured if x >= n), measured[-1])  # conservative: round n up
@@ -146,7 +139,7 @@ def _injections(a: Assumptions, reps: int) -> int:
     return full + reduced
 
 
-def ledger(plan: Plan, m: Measurements, a: Assumptions = Assumptions()) -> pd.DataFrame:
+def ledger(plan: Plan, m: Measurements, a: Assumptions = DEFAULTS) -> pd.DataFrame:
     """One row per (workload, model, precision) with hours, before and after slack."""
     rows = []
     s = plan.seeds
@@ -227,7 +220,7 @@ def ledger(plan: Plan, m: Measurements, a: Assumptions = Assumptions()) -> pd.Da
     return df
 
 
-def total(plan: Plan, m: Measurements, a: Assumptions = Assumptions()) -> float:
+def total(plan: Plan, m: Measurements, a: Assumptions = DEFAULTS) -> float:
     return float(ledger(plan, m, a).hours_with_slack.sum())
 
 
@@ -244,14 +237,8 @@ class BudgetDecision:
 
 
 def plan_budget(m: Measurements, budget_hours: float,
-                a: Assumptions = Assumptions()) -> BudgetDecision:
-    """Reinvest in §3.3 priority order, or cut in §4.2/§13 order.
-
-    Reinvestments are taken in priority order: an item is only ever funded after every
-    higher-priority item has been funded or found unaffordable. An unaffordable item is
-    skipped rather than ending the search — skipping it takes nothing from a higher priority.
-    Within an item, the fullest affordable variant is taken.
-    """
+                a: Assumptions = DEFAULTS) -> BudgetDecision:
+    """Reinvest in SPEC §3.3 priority order, or cut in §4.2/§13 order. See bench/README.md."""
     base = Plan()
     base_h = total(base, m, a)
     if base_h <= budget_hours:
