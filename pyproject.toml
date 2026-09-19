@@ -1,0 +1,33 @@
+[project]
+name = "fidnn"
+version = "0.1.0"
+description = "Fault injection detection in DNNs using multi-layer internal states and SVDD"
+requires-python = "==3.11.*"
+dependencies = [
+    "torch==2.14.0",
+    "torchvision==0.29.0",
+    "numpy>=2.0",
+    "pandas>=2.2",
+    "pyarrow>=17",
+    "scikit-learn~=1.7.2",
+    "pyyaml>=6",
+]
+
+[project.scripts]
+fidnn = "fidnn.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/fidnn"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100

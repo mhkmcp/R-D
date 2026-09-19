@@ -1,0 +1,30 @@
+# M-0 throughput calibration (SPEC §12). Synthetic inputs, random weights: throughput does not
+# depend on weight values, so M-0 runs before any data is downloaded or model trained.
+models: [m1, m2, m3]
+devices: [cpu, mps]
+batch_sizes: [1, 32]
+hook_modes: ["off", capture, features]   # quoted: bare `off` is YAML boolean false
+tap_sets: [default, extended]
+num_threads: null          # null = torch default; the value used is recorded in the sidecar
+seed: 0
+
+timing:                    # SPEC §9.4: median over ≥1000 timed runs, warm-up discarded
+  full:  {warmup: 50, runs: 1000}
+  quick: {warmup: 10, runs: 100}
+
+grad_step:                 # forward+backward (+SGD for training); sizes M-1 training and L1 BFA
+  batch_size: 128
+  full:  {warmup: 5, runs: 50}
+  quick: {warmup: 2, runs: 10}
+
+injection:                 # per-injection fixed costs (§4.4)
+  full:  {runs: 200, checksum_runs: 20}
+  quick: {runs: 30, checksum_runs: 5}
+
+svdd:                      # §6.1: measure exact OneClassSVM before assuming Nystroem is needed
+  nus: [0.001, 0.01, 0.1]  # span of the §6.3 grid; SV count (and cost) grows with ν
+  dims: [29, 174, 377]     # one tap; 6-tap fused; 13-tap fused
+  data: [gaussian, heavy]  # heavy = Student-t with spread scales, the pessimistic case
+  full:  {n: [2000, 10000, 30000]}
+  quick: {n: [2000, 5000]}
+  score_n: 10000
