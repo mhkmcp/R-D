@@ -9,9 +9,8 @@ It is the software for a master's thesis. It evaluates CIFAR-10 image classifier
 VGG-11-BN, in FP32 and INT8) and compares multi-layer monitoring against per-layer and output-only
 monitoring, reporting both detection quality and runtime/memory overhead.
 
-> **Status:** early development. Model definitions, fault injection primitives, activation taps and
-> the throughput benchmark (`fidnn bench m0`) are available; training, detection and evaluation
-> commands are not yet implemented.
+> **Status:** early development. The throughput benchmark, data preparation and model training are
+> available; fault injection sweeps, detection and evaluation commands are not yet implemented.
 
 ## Requirements
 
@@ -35,6 +34,8 @@ uv run fidnn --help
 | Command | What it does | Available |
 |---|---|---|
 | `fidnn bench m0 [--quick]` | Measures inference, injection and detector cost on this machine | ✅ |
+| `fidnn data download` / `prepare` | Downloads CIFAR-10, checks it, and creates the data splits | ✅ |
+| `fidnn train m1\|m2\|m3` | Trains a classifier and checks its accuracy against the published reference | ✅ |
 | `fidnn extract` | Extracts internal-layer features from clean inferences | planned |
 | `fidnn inject` | Runs bit-flip fault-injection sweeps | planned |
 | `fidnn fit` / `calibrate` | Trains SVDD detectors on clean features and sets alarm thresholds | planned |
@@ -53,9 +54,21 @@ Writes measurements to `artifacts/m0/` and a summary to `docs/M0_throughput.md`.
 
 ## Data
 
-CIFAR-10 training images come from Kaggle (you need a Kaggle account and must accept the
-[competition rules](https://www.kaggle.com/competitions/cifar-10/data)). The labelled test set is
-downloaded automatically through torchvision. Step-by-step instructions are in
+CIFAR-10 training images come from Kaggle. Before the first download:
+
+1. Accept the [competition rules](https://www.kaggle.com/competitions/cifar-10/data) in your browser.
+2. Create an API token under Kaggle → Settings → API, and either save it as
+   `~/.kaggle/kaggle.json` (`chmod 600`) or export it as `KAGGLE_API_TOKEN`.
+
+Then:
+
+```bash
+uv run fidnn data download   # ~120 MB from Kaggle + ~163 MB from torchvision
+uv run fidnn data prepare    # checks the data and writes the splits
+uv run fidnn train m2        # ResNet-20; about an hour on Apple silicon
+```
+
+The labelled test set is downloaded automatically through torchvision. More detail is in
 [`docs/Dataset.md`](docs/Dataset.md) §4.
 
 Only `train.7z` and `trainLabels.csv` are needed from Kaggle. Do not download `test.7z`: most of its

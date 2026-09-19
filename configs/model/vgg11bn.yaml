@@ -1,0 +1,14 @@
+# M3 VGG-11-BN. Common CIFAR recipe: SGD 0.05, wd 5e-4, cosine over 200 epochs.
+epochs: 200
+batch_size: 128
+lr: 0.05
+momentum: 0.9
+weight_decay: 5.0e-4
+nesterov: true
+schedule: cosine
+reference:
+  accuracy: 92.79
+  source: >-
+    chenyaofo/pytorch-cifar-models, CIFAR-10 table, vgg11_bn top-1 92.79 %
+    (https://github.com/chenyaofo/pytorch-cifar-models, retrieved 2026-09-19).
+    Same architecture as ours: 3-layer FC head (512-512-10, dropout), ≈9.76M params.
