@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(uv run pytest *)",
+      "Bash(uv run pytest)",
+      "Bash(uv run python -m fidnn *)",
+      "Bash(uv run ruff *)",
+      "Bash(uv sync)",
+      "Bash(uv sync *)",
+      "Bash(uv tree *)",
+      "Bash(make test)",
+      "Bash(make reproduce)",
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git show *)",
+      "Bash(7z l *)",
+      "Bash(shasum -a 256 *)"
+    ],
+    "ask": [
+      "Bash(uv add *)",
+      "Bash(uv remove *)",
+      "Bash(git push *)",
+      "Bash(kaggle competitions submit *)",
+      "Bash(rm -rf *)",
+      "Edit(docs/SPEC.md)",
+      "Edit(docs/Dataset.md)"
+    ],
+    "deny": [
+      "Edit(docs/new_thesis_contract.pdf)",
+      "Edit(artifacts/**)",
+      "Read(.env)",
+      "Read(.env.*)",
+      "Read(~/.kaggle/**)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/c1_guard.sh",
+            "timeout": 10,
+            "statusMessage": "Checking SPEC C1 (no Mahalanobis)"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/bash_guard.sh",
+            "timeout": 10,
+            "statusMessage": "Checking command against SPEC §3.2 and C1"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/ruff_check.sh",
+            "timeout": 30,
+            "statusMessage": "ruff check"
+          }
+        ]
+      }
+    ]
+  }
+}

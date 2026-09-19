@@ -1,123 +1,72 @@
-# Implementation Overview
+# fidnn — Fault Injection Detection in Deep Neural Networks
 
-This project implements a fault-injection detection system for Deep Neural Networks using internal layer information and Support Vector Data Description (SVDD).
+Detects bit-flip faults in a neural network's stored weights and biases (for example from Rowhammer
+or fault-injection hardware) by watching the network's internal activations at several layers, and
+flagging inferences that fall outside a learned model of normal behaviour (Support Vector Data
+Description, SVDD).
 
-## Implementation Steps
+It is the software for a master's thesis. It evaluates CIFAR-10 image classifiers (ResNet-20 and
+VGG-11-BN, in FP32 and INT8) and compares multi-layer monitoring against per-layer and output-only
+monitoring, reporting both detection quality and runtime/memory overhead.
 
-1. **Prepare Dataset**
+> **Status:** early development. Model definitions, fault injection primitives, activation taps and
+> the throughput benchmark (`fidnn bench m0`) are available; training, detection and evaluation
+> commands are not yet implemented.
 
-   * Load and preprocess the selected dataset.
-   * Split the data into training, validation, and test sets.
+## Requirements
 
-2. **Train the DNN**
+- macOS on Apple silicon, or Linux, with Python 3.11
+- [uv](https://docs.astral.sh/uv/)
+- ~1 GB disk for CIFAR-10 and CIFAR-10-C
 
-   * Implement or load the selected DNN architecture.
-   * Train the model using clean data.
-   * Save the trained model and baseline accuracy.
+## Install
 
-3. **Select Monitoring Layers**
-
-   * Choose several internal DNN layers for monitoring.
-   * Register hooks or equivalent mechanisms to capture layer activations during inference.
-
-4. **Extract Internal Features**
-
-   * Run clean samples through the network.
-   * Collect activation values from the selected layers.
-   * Convert large activation tensors into compact feature vectors using statistical or dimensionality-reduction features.
-
-5. **Create Normal Behaviour Model**
-
-   * Use features extracted from clean executions as normal reference data.
-   * Train SVDD models using only normal samples.
-
-6. **Implement Fault Injection**
-
-   * Inject bit flips into model weights and biases.
-   * Vary:
-
-     * target layer
-     * target parameter
-     * bit position
-     * number of injected faults
-   * Store information about every injected fault.
-
-7. **Run Fault-Injected Inference**
-
-   * Execute the DNN after fault injection.
-   * Collect the same internal features from the monitored layers.
-
-8. **Detect Anomalies with SVDD**
-
-   * Compare fault-injected features against the learned normal behaviour.
-   * Mark samples outside the SVDD decision boundary as anomalous.
-
-9. **Implement Two Detection Strategies**
-
-   **Multi-layer SVDD**
-
-   * Combine features from several monitored layers.
-   * Train one SVDD model using the combined feature vector.
-
-   **Per-layer SVDD**
-
-   * Train a separate SVDD model for each monitored layer.
-   * Identify where abnormal behaviour first appears and how it propagates through the network.
-
-10. **Evaluate Detection Performance**
-
-    * Measure:
-
-      * Detection rate
-      * False-positive rate
-      * Precision
-      * Recall
-      * F1-score
-      * ROC-AUC
-
-11. **Measure System Overhead**
-
-    * Compare normal inference and monitored inference.
-    * Measure:
-
-      * Runtime overhead
-      * Memory overhead
-      * Feature extraction cost
-      * SVDD detection cost
-
-12. **Compare the Approaches**
-
-    * Compare multi-layer monitoring against per-layer monitoring.
-    * Study which layers provide the most useful information.
-    * Identify whether fewer monitored layers can maintain strong detection performance.
-
-13. **Generate Results**
-
-    * Save experiment results in CSV or JSON format.
-    * Generate plots, tables, confusion matrices, ROC curves, and layer-wise detection results for thesis analysis.
-
-## Expected Pipeline
-
-```text
-Dataset
-   ↓
-Train DNN
-   ↓
-Clean Inference
-   ↓
-Internal Layer Feature Extraction
-   ↓
-Train SVDD on Normal Behaviour
-   ↓
-Inject Bit-Flip Faults
-   ↓
-Fault-Injected Inference
-   ↓
-Extract Internal Features
-   ↓
-SVDD Anomaly Detection
-   ↓
-Multi-Layer / Per-Layer Comparison
-   ↓
-Performance + Overhead Evaluation
+```bash
+git clone <repo-url> && cd R-D
+uv sync
 ```
+
+## Usage
+
+```bash
+uv run fidnn --help
+```
+
+| Command | What it does | Available |
+|---|---|---|
+| `fidnn bench m0 [--quick]` | Measures inference, injection and detector cost on this machine | ✅ |
+| `fidnn extract` | Extracts internal-layer features from clean inferences | planned |
+| `fidnn inject` | Runs bit-flip fault-injection sweeps | planned |
+| `fidnn fit` / `calibrate` | Trains SVDD detectors on clean features and sets alarm thresholds | planned |
+| `fidnn eval` / `report` | Evaluates detection and overhead, writes tables and figures | planned |
+
+Configuration lives in `configs/`. Results are written to `artifacts/` as Parquet files, each with a
+JSON sidecar recording the code version, configuration, seed and device.
+
+### Benchmark example
+
+```bash
+uv run fidnn bench m0 --quick     # a few minutes; full run without --quick
+```
+
+Writes measurements to `artifacts/m0/` and a summary to `docs/M0_throughput.md`.
+
+## Data
+
+CIFAR-10 training images come from Kaggle (you need a Kaggle account and must accept the
+[competition rules](https://www.kaggle.com/competitions/cifar-10/data)). The labelled test set is
+downloaded automatically through torchvision. Step-by-step instructions are in
+[`docs/Dataset.md`](docs/Dataset.md) §4.
+
+Only `train.7z` and `trainLabels.csv` are needed from Kaggle. Do not download `test.7z`: most of its
+images are dummies and none are labelled.
+
+## Documentation
+
+- [`docs/SPEC.md`](docs/SPEC.md): full technical and experimental specification
+- [`docs/Dataset.md`](docs/Dataset.md): dataset choice, download, splits and licensing
+
+## Citation and licences
+
+CIFAR-10: Krizhevsky (2009), *Learning Multiple Layers of Features from Tiny Images*. CIFAR-10-C:
+Hendrycks & Dietterich (2019), CC BY 4.0.
