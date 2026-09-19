@@ -1,0 +1,9 @@
+# M1 ResNet-8 smoke test on a 2-class subset — produces no thesis result, so no accuracy gate.
+classes: [3, 5]   # cat vs dog: the hardest pair, so the smoke test is not trivially saturated
+epochs: 30
+batch_size: 128
+lr: 0.1
+momentum: 0.9
+weight_decay: 1.0e-4
+schedule: cosine
+reference: null
