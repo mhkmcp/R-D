@@ -48,7 +48,7 @@ RBF `gamma` absorbs remaining isotropic scale.
   state the SVDD interpretation in the thesis.
 - Score `s(x) = −decision_function(x)`; `> 0` ⇒ outside boundary.
 - Large sets: `make_pipeline(Nystroem(gamma, n_components), SGDOneClassSVM(nu))`. **Measure** whether
-  it is needed (`clean_fit` = 30k; 13-tap fused ≈ 377-d) and, if used, report the approximation gap vs
+  it is needed (`clean_fit` = 6k; 13-tap fused ≈ 377-d) and, if used, report the approximation gap vs
   exact OCSVM **once, on M2** (not M1).
 
 ## Variants (§6.2) — the study's independent variable

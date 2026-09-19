@@ -223,25 +223,27 @@ leaderboard submission may be made at M-1 as an independent accuracy check; it p
 number.
 
 **Integrity checks (required tests, §11.4).** Zero pixel-hash collisions between the Kaggle training
-images and the canonical test images — an overlap would put probe images into `clean_fit`, a C2
-violation; if it fails, use the canonical distribution for both. `trainLabels.csv` agrees with the
+images and the canonical test images — an overlap would put probe images into the classifier's
+training set or `clean_fit`, a C2 violation; if it fails, use the canonical distribution for both. `trainLabels.csv` agrees with the
 canonical training labels on a sampled subset.
 
 **Splits.** The §7 partition is carved as:
 
-| §7 split | Source |
+| Split | Source |
 |---|---|
-| `clean_fit` (60 %) / `clean_cal` (20 %) | Stratified split of the 50,000 Kaggle training images, seeded and persisted |
-| `clean_test` (20 %) | Held out from the training images |
+| `train` (40,000) | Stratified 80 % of the 50,000 Kaggle training images — **classifier training only**, never a detector record |
+| `clean_fit` (6,000) / `clean_cal` (2,000) / `clean_test` (2,000) | Stratified 60/20/20 split of the remaining 10,000 Kaggle images, which the classifier never sees |
 | Fault probe pool | The **canonical labelled 10,000-image test set** — disjoint from all of the above |
 
-Clean and fault records draw their input samples from the same held-out pool (§7), so detection
-cannot be attributed to input distribution shift.
+All splits are seeded and persisted. Every detector record — clean or fault — comes from an image the
+classifier was not trained on, so detection cannot be attributed to a seen-versus-unseen activation
+shift (§7). *(Amended at M-1: the earlier table carved `clean_*` from the classifier's own training
+images, which would have fitted the detector on memorised activations and tested it on unseen ones.)*
 
 **Preprocessing.**
 
 - Per-channel mean/std normalisation with the standard CIFAR-10 constants
-  (mean ≈ `(0.4914, 0.4822, 0.4465)`, std ≈ `(0.2470, 0.2435, 0.2616)`), **fitted on `clean_fit`
+  (mean ≈ `(0.4914, 0.4822, 0.4465)`, std ≈ `(0.2470, 0.2435, 0.2616)`), **fitted on `train`
   only** and frozen. Per C1, **no GCN/ZCA whitening** (§0).
 - Training augmentation: random crop 32×32 with 4-pixel padding, random horizontal flip. Augmentation
   is **training only** — clean feature extraction for the detector uses unaugmented images, so the
@@ -537,7 +539,7 @@ SGDOneClassSVM(nu=…))` is used; the approximation gap versus exact `OneClassSV
 because it is a reported number, and M1 produces no thesis result (§3).
 
 > Whether this path is needed at all is a measurement, not an assumption. `clean_fit` on CIFAR-10 is
-> 30,000 samples — small enough that exact `OneClassSVM` may well fit — but the extended 13-tap fused
+> 6,000 samples — small enough that exact `OneClassSVM` should fit (M-0 measured it) — but the extended 13-tap fused
 > feature vector (13 × 29 ≈ 377 dimensions) is wide, and §3.3 makes the extended set the planned
 > configuration rather than a sweep-only one. Measure before assuming either way.
 
@@ -599,9 +601,9 @@ grep-based guard against banned constructs is not optional.
 
 | Split | Content | Used for |
 |---|---|---|
-| `clean_fit` | 60 % of clean inference records | Fitting normaliser + SVDD |
-| `clean_cal` | 20 % | Threshold calibration, score CDF mapping, hyperparameter selection |
-| `clean_test` | 20 % | FPR measurement |
+| `clean_fit` | 60 % of the 10,000 classifier-held-out Kaggle images (6,000) | Fitting normaliser + SVDD |
+| `clean_cal` | 20 % (2,000) | Threshold calibration, score CDF mapping, hyperparameter selection |
+| `clean_test` | 20 % (2,000) | FPR measurement |
 | `fault_dev` | Random 30 % of injection **instances**, drawn across the full §4.2 grid, excluding the reserved configurations below | Development, sanity checks only |
 | `fault_test` | The disjoint remaining 70 % of instances, spanning the **full grid** — all 3 layer buckets, all 5 bit strata, all budgets, all fault modes — plus all L1/L2 attacks | Headline results |
 | `fault_gen` | A tagged subset **of `fault_test`**: the configurations deliberately never sampled into `fault_dev` (bit stratum {sign}, budget {4}) | Unseen-configuration generalisation, reported separately |
@@ -617,9 +619,10 @@ Generalisation to unseen fault configurations is a real claim, so it keeps its o
 `fault_gen` — rather than being bought at the cost of the headline's coverage. It is reported as a
 separate row, never merged into the headline number.
 
-Input samples underlying clean and fault records are drawn from the same held-out pool — the
-canonical labelled CIFAR-10 test images (§3.2), for every model in the study — so detection cannot be
-attributed to input distribution shift.
+Input samples underlying clean and fault records are all held out from classifier training (§3.2):
+`clean_*` from the 10,000 Kaggle images outside `train`, fault probes from the canonical test set, for
+every model in the study — so detection cannot be attributed to a seen-versus-unseen input shift.
+Clean inference on the probe pool itself is also recorded, for the §4.3 taxonomy.
 
 An automated leakage check runs before every results build and fails it on any of:
 - a fault record ID appearing in any fitting or calibration set;
@@ -759,9 +762,9 @@ never as a win.
 4. **Precision** — FP32 vs INT8, on M2 and M3. A headline-adjacent result rather than a
    side-ablation, since INT8 is the regime the attack literature operates in (§3) and the only arm
    carrying external comparability.
-5. **Training budget** — clean fitting samples ∈ {500, 2k, 10k, 30k}; establishes the minimum
-   calibration data a deployer needs. Upper bound is 30k rather than 50k because `clean_fit` is 60 %
-   of CIFAR-10's 50,000 training images (§3.2).
+5. **Training budget** — clean fitting samples ∈ {500, 1k, 2k, 6k}; establishes the minimum
+   calibration data a deployer needs. Upper bound is 6k because `clean_fit` is 60 % of the 10,000
+   images held out from classifier training (§3.2).
 6. **Kernel sensitivity** — RBF vs polynomial vs linear SVDD.
 7. **Transfer** — detector fitted on M2 applied to M3 taps (expected to fail; documents that the
    monitor is model-specific, which is a deployment cost worth stating). Because M2 and M3 share
@@ -883,8 +886,8 @@ liability unless it is recorded, and this is how it is recorded.
   model: no model produces a dense tap (§5.2), but the code path stays live because §9.6(3)'s
   Block-D downgrade exercises the same 22-feature width, and an untested path would make that
   ablation's result untrustworthy.
-- Leakage guard (§7) as a failing test, not a comment — including the assertion that the CIFAR-10
-  channel statistics were fit on `clean_fit` only.
+- Leakage guard (§7) as a failing test, not a comment — including the assertions that the CIFAR-10
+  channel statistics were fit on `train` only and that `train` is disjoint from every detector split.
 - Feature determinism: identical input ⇒ identical feature vector across runs.
 - Overhead harness sanity: monitor-off path is statistically indistinguishable from the unmodified
   model.
