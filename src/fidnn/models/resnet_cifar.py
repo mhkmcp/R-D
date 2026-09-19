@@ -1,8 +1,7 @@
 """CIFAR ResNets, He et al. 2016 §4.2, option-A shortcuts (M1 n=1, M2 n=3)."""
 
-import torch
-import torch.nn as nn
 import torch.nn.functional as F
+from torch import nn
 from torch.ao.nn.quantized import FloatFunctional
 
 from fidnn.models.common import Tap

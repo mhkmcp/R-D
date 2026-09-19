@@ -36,7 +36,7 @@ are stubs that name their milestone.
 - Hook coverage: each tap fires exactly once per forward; removing hooks restores baseline latency.
 - Tap budget ≥ 5 per model, from the registry.
 - Feature-block population: D-conv non-zero on all conv taps; D-dense on synthetic `(N, D)` tensors.
-- Leakage guard (§7) incl. channel stats fitted on `clean_fit` only.
+- Leakage guard (§7) incl. channel stats fitted on `train` only, `train` disjoint from detector splits.
 - Feature determinism: same input ⇒ same vector.
 - Overhead harness: monitor-off path indistinguishable from the unmodified model.
 

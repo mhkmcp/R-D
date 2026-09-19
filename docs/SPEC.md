@@ -1,30 +1,18 @@
 # SPEC — Fault Injection Detection in Deep Neural Networks Using Multi-Layer Internal States and Support Vector Data Description
 
 **Status:** Draft v2.0 · **Date:** 2026-09-19 · **Derived from:** `new_thesis_contract.pdf`
-**Dataset companion:** [`Dataset.md`](Dataset.md) v2.0
-
-> **Change in v2.0 — CIFAR-10 is the only dataset, and this is final.** The thesis runs entirely on
-> CIFAR-10 (<https://www.kaggle.com/competitions/cifar-10/data>) across the model lineup **M1–M3**.
-> The v1.1 arms **M4 (Speech Commands) and M5 (UNSW-NB15) are withdrawn** — not deferred, not
-> optional. Every clause below has been brought in line; where a v1.1 argument rested on those arms,
-> the substitute is named rather than the claim quietly dropped. §3.3 records what the single-dataset
-> design costs and what it frees, and §13 carries the resulting bound on generality as an explicit
-> limit rather than an omission.
->
-> **Carried forward from v1.1**, unchanged: the former project constraint *"no image datasets"* is
-> withdrawn (§0, S1-superseded), and the thesis has **direct numerical comparability to the bit-flip
-> attack literature** (BFA, DeepHammer, TBT, ProFlip) — previously the largest threat to validity in
-> §13. In a single-dataset design that comparability is the *only* external anchor the project has,
-> which is why the INT8 arm (§3.1) and the M-1b gate (§12) are now effectively uncuttable.
+**Dataset companion:** [`Dataset.md`](Dataset.md) v2.0 — dataset rationale, acquisition, licensing,
+alternatives considered and revision history live there. This document keeps only the data
+requirements the experiments depend on.
 
 This document is the engineering and experimental specification for the thesis. It fixes the
 threat model, the feature extraction contract, the detector formulation, the evaluation protocol,
 and the deliverables, so that results are reproducible and the contract's claims are testable.
 
-**On scope.** The contract requires variation across *architectures* and *fault models* — not across
-datasets. A single-dataset design with two contrasting architectures (M2 residual, M3 plain, identical
-inputs) satisfies the clause as written. That is the formal basis for v2.0; §3.3 is the honest
-accounting of what it nonetheless costs.
+**Scope.** One dataset (CIFAR-10), two contrasting architectures (M2 residual, M3 plain) on identical
+inputs, two precisions (FP32, INT8). The contract requires variation across *architectures* and
+*fault models*, not datasets, so this satisfies it as written; the resulting bound on generality is
+stated in §1 and §13.
 
 ---
 
@@ -38,19 +26,6 @@ accounting of what it nonetheless costs.
 | C3 | Decision thresholds are calibrated on a **clean validation split**, at a target false-positive rate fixed *a priori*. | Prevents the common overstatement of picking the threshold that maximises F1 on the test set. |
 | C4 | Every reported number carries a seed count and a dispersion estimate (§9.5). | Single-run anomaly-detection numbers are not trustworthy. |
 | C5 | Detection quality and **runtime/memory overhead** are reported together, never separately. | The contract requires overhead as a first-class result. |
-
-### Superseded constraint — S1, "no image datasets"
-
-Draft v1.0 carried a standing project constraint excluding image datasets, which made CIFAR-10
-ineligible and forced keyword spotting into the primary slot. **That constraint is withdrawn as of
-2026-09-19.** It is recorded here rather than deleted, because the v1.0 dataset rationale was written
-to satisfy it and a reader comparing revisions is entitled to see that the change was a decision and
-not a drift. v2.0 goes further and makes CIFAR-10 the *only* dataset (§3, §3.3).
-
-C1 is *not* affected by this. C1 is a separate standing requirement and remains in force —
-and, as §6.4 notes, it binds harder on CIFAR-10 than it did under the v1.0 audio design, because the
-Mahalanobis OOD
-score is the single most expected baseline in the vision anomaly-detection literature.
 
 ### C1 in practice — banned constructs
 
@@ -80,12 +55,12 @@ so the cut order under schedule pressure (§13) is obvious and no commitment is 
 
 | Addition | Where | Cut cost |
 |---|---|---|
-| Adaptive attacker (L2) | §2, §10 | None to the contract. Formerly first on the cut list; in v2.0 it is the **first candidate for the budget freed by dropping M4/M5** (§3.3), so cutting it now forgoes a planned gain rather than merely trimming |
+| Adaptive attacker (L2) | §2, §10 | None to the contract; a planned §3.3 reinvestment, so cutting it forgoes a planned gain |
 | `sa0`/`sa1`, `rnd_val` fault modes | §4.1 | None; `bf_w`/`bf_b` carry the contract's fault model |
 | `bf_act` transient activation faults | §4.1 | None; the contract scopes faults to weights and biases |
-| INT8 quantised arm | §3, §9.6(4) | **Effectively uncuttable in v2.0.** The bit-flip literature attacks 8-bit quantised models, so INT8 is the arm that carries external comparability (§3.1) — and with M4/M5 withdrawn it is the *only* external anchor left in the project. Cutting it leaves every number in the thesis internal |
+| INT8 quantised arm | §3, §9.6(4) | **Effectively uncuttable.** The bit-flip literature attacks 8-bit quantised models, so INT8 is the project's *only* external anchor (§3.1). Cutting it leaves every number in the thesis internal |
 | Deep SVDD (D4) | §6.2 | None; already marked an extension |
-| Dataset and architectures (§3) | §3.1 | The contract names neither, requiring only "across architectures and fault models" — a single dataset with two contrasting architectures satisfies it as written |
+| Dataset and architectures (§3) | §3.1 | The contract names neither, requiring only "across architectures and fault models" |
 | C1 (Mahalanobis exclusion) | §0 | Not the contract's; a separate standing project requirement |
 
 Everything else in this document traces to a clause of the contract. §14 requires a traceability
@@ -176,8 +151,8 @@ calibration dataset; a fixed compute budget for monitoring.
 
 ## 3. Target models and dataset
 
-**One dataset — CIFAR-10** (<https://www.kaggle.com/competitions/cifar-10/data>), handled per §3.2.
-Full acquisition, split and provenance detail lives in [`Dataset.md`](Dataset.md) v2.0.
+**One dataset — CIFAR-10**, handled per §3.2. Acquisition, provenance, licensing and the selection
+rationale live in [`Dataset.md`](Dataset.md).
 
 | ID | Dataset | Model | Precision | Role |
 |---|---|---|---|---|
@@ -190,96 +165,37 @@ exercises the pipeline end to end and is never cited as a result. Baseline clean
 model is recorded in `artifacts/models/manifest.json` and must be within 1 point of the published
 reference before any fault experiment runs.
 
-**M2 vs M3 is the contract's architecture variation, and it is a clean one.** ResNet-20 and VGG-11-BN
-consume identical inputs and differ only in whether skip connections exist, so the H4 propagation
-comparison isolates the variable it intends to. v1.0's design contrasted DS-CNN against a raw-waveform
-residual CNN, varying *topology and input representation at the same time* — a confound for H4 that
-this lineup does not have. **This is what makes a single-dataset design contract-compliant:** the
-contract asks for variation across architectures and fault models, not across datasets.
+**M2 vs M3 is the contract's architecture variation.** ResNet-20 and VGG-11-BN consume identical
+inputs and differ only in whether skip connections exist, so the H4 propagation comparison isolates
+topology.
 
-> **Arms withdrawn in v2.0.** M4 (Speech Commands v2 / DS-CNN) and M5 (UNSW-NB15 / residual MLP) are
-> **removed from the thesis**. They carried, respectively, the audio modality contrast with a
-> corroborating §9.6(8) SNR sweep, and the dense-tap contrast with a security deployment narrative.
-> §3.3 states precisely what that removes, what substitutes for each loss, and what the freed budget
-> is reinvested in. The v1.1 raw-waveform model "M5-Net" (Dai et al. 2017) was already dropped in
-> v1.1 and does not return. Reinstating any of these is a pure C0 addition, not a restoration of
-> something this spec still assumes.
-
-INT8 post-training quantisation is included for two reasons now. First, as before: bit flips in an
-8-bit weight have a bounded, qualitatively different effect from a flip in an FP32 exponent, and the
-detector must be shown to work in both regimes rather than only in the easy FP32-exponent case.
-Second: **BFA, DeepHammer, TBT and ProFlip all attack 8-bit quantised networks**, so the INT8 arm —
-not the FP32 one — is where this thesis's flip budgets are comparable to published numbers. That
-promotes INT8 from a curiosity to the comparability arm (§0, C0 table), and in v2.0 to the project's
-only external anchor.
+INT8 post-training quantisation is included for two reasons. Bit flips in an 8-bit weight have a
+bounded, qualitatively different effect from a flip in an FP32 exponent, and the detector must be
+shown to work in both regimes. And **BFA, DeepHammer, TBT and ProFlip all attack 8-bit quantised
+networks**, so the INT8 arm is where this thesis's flip budgets are comparable to published numbers —
+the project's only external anchor (§0, C0 table).
 
 **Constraint:** PyTorch quantized kernels run on CPU backends (qnnpack / x86), **not** on MPS. Since
 §11.3 already fixes CPU as the reporting device this costs nothing for correctness, but INT8 and FP32
-overhead figures are still tabulated separately (§9.4) because the kernel implementations differ.
+overhead figures are tabulated separately (§9.4) because the kernel implementations differ.
 
 ### 3.1 Dataset rationale
 
-With S1 withdrawn (§0) and the design narrowed to a single dataset, the binding selection constraints
-are: laptop-class compute (Apple MPS / CPU), and structure sufficient to support the hypotheses:
+What the design requires of the dataset:
 
-- **H2/H3/H4 are hypotheses about layers.** A 3–4 layer model cannot support a multi-layer fusion
-  claim or a propagation result. Every model here provides ≥ 5 usable taps (§5.1).
-- **§5.2's feature blocks assume channel structure.** Conv taps populate all 29 features (§5.2).
-  Every tap in v2.0 is a conv tap, so the full feature set is exercised throughout — see §3.3 for the
-  consequence, which is that the reduced dense variant is now never exercised by a model.
+- **≥ 5 usable taps per model** (§5.1) — H2/H3/H4 are hypotheses about layers.
+- **Channel-structured activations** — every tap is a conv tap, so all 29 §5.2 features are populated.
+- **A severity-graded clean-input shift suite** for §9.6(8) — CIFAR-10-C.
+- **Comparability to the bit-flip attack literature** — BFA and DeepHammer report ResNet-20 and
+  VGG-class networks on CIFAR-10, so the L1 attacker can be validated against published curves (M-1b)
+  before it generates the fault population.
+- **Few enough classes to keep Track S (§4.3) populated** — more classes pack decision boundaries
+  closer and empty it. The M-2 gate (§12) verifies this rather than assuming it.
 
-**In a single-dataset design these criteria must all be met by the same dataset at once.** Under v1.1
-a gap left by one dataset could be covered by another — the confounder suite by CIFAR-10-C, the
-modality breadth by M4, the dense taps by M5. That fallback no longer exists, which is why §3.3
-states the residual gaps rather than implying they are covered.
+Why CIFAR-10 meets these and the alternatives do not, and the standard objections (small and
+saturated, 32×32 unrealistic, one dataset only), are answered in Dataset.md §9–§11.
 
-**Why CIFAR-10 — the comparability argument.** This is the reason that decided it. The
-bit-flip attack literature is almost entirely CIFAR-10 and ImageNet: BFA (Rakin et al., ICCV 2019)
-and DeepHammer (Yao et al., USENIX Security 2020) both report on ResNet-20 and VGG-class networks
-trained on CIFAR-10; TBT (CVPR 2020) and ProFlip (ICCV 2021) use the same setting for targeted
-attacks. Draft v1.0 recorded as its **largest threat to validity** that the thesis would have *"no
-direct numerical comparison to prior work"* on flip budgets or attack success rates. Adopting
-CIFAR-10 + ResNet-20 + INT8 retires that threat: the L1 attacker (§2) can be run as a faithful BFA
-reimplementation, its flip-budget-to-accuracy-collapse curve checked against the published one, and
-only then used to generate the fault population this thesis detects. **A defender evaluated against a
-calibrated, externally-validated attacker is a materially stronger result than one evaluated against
-an attacker only this thesis has ever run.**
-
-**Why CIFAR-10 — the practical argument.**
-
-- **Depth.** ResNet-20 gives 9 residual blocks across 3 stages, plus stem, pooled embedding and
-  logits — 6 taps by default and up to 13 if every block is tapped. H2/H3/H4 have room to breathe.
-- **Cost.** 32×32×3 inputs and a 270k-parameter ResNet-20 (≈41 MFLOP/image) keep the §4.2 grid on a
-  laptop. M2 and M3 each run two precisions, so the M-0 gate (§12) still binds — though with M4/M5
-  withdrawn the total project budget falls substantially (§3.3).
-- **Ten classes preserves the subtle-fault regime.** §4.3 splits outcomes into Track S (`MASKED` ∪
-  `DEGRADED`) and Track H, and Track S is where the contract's claim lives: *"others induce smaller
-  internal deviations that remain unnoticed."* As class count rises, decision boundaries pack closer,
-  any perturbation is likelier to flip top-1, and Track S empties. Ten classes keeps it populated; a
-  1000-class task would quietly delete the phenomenon the thesis exists to study.
-- **CIFAR-10-C supplies the §9.6(8) confounder set natively.** Hendrycks & Dietterich's corruption
-  benchmark gives **15 corruption types × 5 severity levels** over the same 10,000 test images: a
-  standard, citable, severity-graded shift suite with no constructed perturbation to defend. §9.6(8)
-  is the ablation that decides whether this is a *fault* detector or merely a novelty detector, and
-  in v2.0 CIFAR-10-C is its **sole** evidence — see §9.6(8) for the two reporting requirements that
-  partly compensate.
-- **Redundancy is adequate for Track S.** At 270k parameters ResNet-20 carries enough capacity that
-  single low-mantissa flips are often absorbed, which is what keeps Track S populated. The M-2 gate
-  (§12) verifies this rather than assuming it.
-
-**Two fair objections, stated here rather than left for the defense.**
-
-1. *"CIFAR-10 is small, saturated and much-studied."* True, and irrelevant to this thesis. The object
-   of study is a **detector over internal states under parameter corruption**, not a classifier
-   competing on accuracy. Saturation is an advantage: reference accuracies are unambiguous, so the
-   M-1 gate is a sharp instrument, and the attack literature this thesis compares against lives here.
-2. *"32×32 images are not a realistic deployment input."* The threat model (§2) does not depend on
-   resolution — it depends on parameters living in writable memory. DeepHammer demonstrated exactly
-   this attack against exactly this class of model. Where resolution would matter is a claim about
-   scaling to ImageNet-class networks, and no such claim is made; §13 records it as a limit.
-
-**Division of labour.** Every job now falls to the same two models, distinguished only by
-architecture:
+**Division of labour.**
 
 | Job | M2 ResNet-20 | M3 VGG-11-BN |
 |---|---|---|
@@ -291,80 +207,43 @@ architecture:
 | Comparison to BFA / DeepHammer / TBT | ✅ (INT8 arm) | ✅ (INT8 arm) |
 | Deployment narrative | Embedded vision / Rowhammer | Embedded vision / Rowhammer |
 
-**Objections to the single-dataset design, stated rather than left for the defense.**
-
-1. *"CIFAR-10 is small, saturated and much-studied."* True, and irrelevant to this thesis. The object
-   of study is a **detector over internal states under parameter corruption**, not a classifier
-   competing on accuracy. Saturation is an advantage: reference accuracies are unambiguous, so the
-   M-1 gate is a sharp instrument, and the attack literature this thesis compares against lives here.
-2. *"32×32 images are not a realistic deployment input."* The threat model (§2) does not depend on
-   resolution — it depends on parameters living in writable memory. DeepHammer demonstrated exactly
-   this attack against exactly this class of model. Where resolution would matter is a claim about
-   scaling to ImageNet-class networks, and no such claim is made; §13 records it as a limit.
-3. *"You evaluated on one dataset."* The contract requires variation across architectures and fault
-   models, and M2/M3 × four fault modes × five bit strata delivers it. What a single dataset cannot
-   deliver is *modality* generality, and the thesis does not claim it: H1–H4 are stated as claims
-   about vision CNNs on 32×32 inputs (§1), and §13 carries the bound explicitly. **A narrower claim
-   fully supported is worth more than a broad claim resting on two confirmatory subsets** — which is
-   all M4 and M5 ever were.
-
 ### 3.2 CIFAR-10 data handling
 
-**Source packaging.** The Kaggle *CIFAR-10 — Object Recognition in Images* competition
-(<https://www.kaggle.com/competitions/cifar-10/data>) distributes:
+**Sources.**
 
-| File | Contents |
+| Role | Source |
 |---|---|
-| `train.7z` | 50,000 PNG images, 32×32 RGB, named `1.png` … `50000.png` |
-| `trainLabels.csv` | `id,label` over those 50,000 ids |
-| `test.7z` | **300,000** PNG images, `1.png` … `300000.png` |
-| `sampleSubmission.csv` | `id,label` submission template |
+| Training data | Kaggle `train.7z` + `trainLabels.csv` — 50,000 labelled images |
+| Labelled held-out pool | Canonical `torchvision.datasets.CIFAR10(train=False)` — 10,000 labelled test images |
+| Confounder set | CIFAR-10-C — 15 corruption types × 5 severities over the same 10,000 images |
 
-Classes (10): `airplane`, `automobile`, `bird`, `cat`, `deer`, `dog`, `frog`, `horse`, `ship`,
-`truck`. Competition metric: classification accuracy.
+The Kaggle `test.7z` is **not used**: 290,000 of its 300,000 images are dummies and none are labelled,
+so it cannot supply the per-probe ground truth §4.3 needs (Dataset.md §3.1). A one-shot Kaggle
+leaderboard submission may be made at M-1 as an independent accuracy check; it produces no thesis
+number.
 
-**The test archive is not usable as a held-out pool, and this is the one non-obvious fact about this
-dataset.** Only **10,000** of the 300,000 test images are the real CIFAR-10 test set; the remaining
-**290,000 are dummies**, added by the competition organisers to deter hand-labelling, and Kaggle
-silently ignores predictions on them when scoring. No labels are published for any of the 300,000.
-
-This is disqualifying for our purposes. §4.3's outcome taxonomy needs ground truth for every probe —
-`MASKED`/`DEGRADED`/`SDC` are defined by whether the top-1 prediction changed *and* what the correct
-answer was — and §7 needs a labelled held-out pool shared between clean and fault records. A leaderboard
-score returns one aggregate number per submission and cannot supply any of that.
-
-**Resolution (per the v1.1 decision):**
-
-- **Training data** comes from the Kaggle `train.7z` + `trainLabels.csv` (50,000 labelled images).
-- **The held-out labelled pool** comes from the **canonical CIFAR-10 distribution**
-  (`torchvision.datasets.CIFAR10(train=False)`, Krizhevsky 2009), which ships the same 10,000 test
-  images *with* labels.
-- `test.7z` is **not downloaded** — it is ~600 MB of which 97 % is unusable. A Kaggle leaderboard
-  submission may optionally be made once, at M-1, as an independent check that the M2 accuracy gate
-  is not the product of a split error; it produces no thesis number.
-
-**A required integrity check, because the two sources must not overlap.** The Kaggle training images
-are a repackaging of the canonical 50,000-image training set, so in principle the canonical test set
-is disjoint from them. That must be *verified*, not assumed: §11.4 asserts zero pixel-hash collisions
-between the Kaggle training images and the canonical test images. A silent overlap would put test
-images into `clean_fit` and inflate every detection number through a route invisible in the results —
-a direct C2 violation. If the check fails, fall back to the canonical distribution for both splits.
+**Integrity checks (required tests, §11.4).** Zero pixel-hash collisions between the Kaggle training
+images and the canonical test images — an overlap would put probe images into the classifier's
+training set or `clean_fit`, a C2 violation; if it fails, use the canonical distribution for both. `trainLabels.csv` agrees with the
+canonical training labels on a sampled subset.
 
 **Splits.** The §7 partition is carved as:
 
-| §7 split | Source |
+| Split | Source |
 |---|---|
-| `clean_fit` (60 %) / `clean_cal` (20 %) | Stratified split of the 50,000 Kaggle training images, seeded and persisted |
-| `clean_test` (20 %) | Held out from the training images |
+| `train` (40,000) | Stratified 80 % of the 50,000 Kaggle training images — **classifier training only**, never a detector record |
+| `clean_fit` (6,000) / `clean_cal` (2,000) / `clean_test` (2,000) | Stratified 60/20/20 split of the remaining 10,000 Kaggle images, which the classifier never sees |
 | Fault probe pool | The **canonical labelled 10,000-image test set** — disjoint from all of the above |
 
-Clean and fault records draw their input samples from the same held-out pool (§7), so detection
-cannot be attributed to input distribution shift.
+All splits are seeded and persisted. Every detector record — clean or fault — comes from an image the
+classifier was not trained on, so detection cannot be attributed to a seen-versus-unseen activation
+shift (§7). *(Amended at M-1: the earlier table carved `clean_*` from the classifier's own training
+images, which would have fitted the detector on memorised activations and tested it on unseen ones.)*
 
 **Preprocessing.**
 
 - Per-channel mean/std normalisation with the standard CIFAR-10 constants
-  (mean ≈ `(0.4914, 0.4822, 0.4465)`, std ≈ `(0.2470, 0.2435, 0.2616)`), **fitted on `clean_fit`
+  (mean ≈ `(0.4914, 0.4822, 0.4465)`, std ≈ `(0.2470, 0.2435, 0.2616)`), **fitted on `train`
   only** and frozen. Per C1, **no GCN/ZCA whitening** (§0).
 - Training augmentation: random crop 32×32 with 4-pixel padding, random horizontal flip. Augmentation
   is **training only** — clean feature extraction for the detector uses unaugmented images, so the
@@ -376,47 +255,30 @@ error). VGG-11-BN on CIFAR-10: **≈ 92 %**; the exact reference figure must be 
 cited source in `manifest.json` before M-1 is signed off, since VGG-on-CIFAR numbers vary across
 reimplementations in a way the ResNet figure does not.
 
-**Confounder set.** CIFAR-10-C (Hendrycks & Dietterich, ICLR 2019; Zenodo
-`10.5281/zenodo.2535967`, CC BY 4.0) — 15 corruption types × 5 severities over the same 10,000 test
-images. This is the primary §9.6(8) evidence. Corruptions are applied to *clean* inputs only; they
-are never combined with fault injection.
-
-**Licensing.** CIFAR-10 carries no formal licence and is freely distributed for research; cite
-Krizhevsky (2009), *Learning Multiple Layers of Features from Tiny Images*. Kaggle competition data
-is subject to the competition rules — acceptable for academic use, and no redistribution of the
-archives occurs here. CIFAR-10-C is CC BY 4.0 and is cited accordingly.
+**Confounder set.** CIFAR-10-C (Hendrycks & Dietterich 2019) is the §9.6(8) evidence. Corruptions are
+applied to *clean* inputs only; they are never combined with fault injection.
 
 ### 3.3 What the single-dataset design costs, and what it frees
 
-Recorded here because it is the most predictable examination question about v2.0, and because a spec
-that drops two arms without accounting for them invites the suspicion that they were dropped for
-convenience rather than decided.
+The history of the change is in Dataset.md §10. What remains binding here is which clauses stand in
+for the withdrawn arms, and how the freed compute is spent.
 
-**What is lost, and what substitutes for it:**
+| Lost | Substitute |
+|---|---|
+| Modality generality | **None** — stated as a bound in §1 and §13 |
+| Dense-tap contrast | Block-D downgrade on conv taps (§9.6(3)) |
+| Independent confounder corroboration | Per-type and per-family CIFAR-10-C reporting (§9.6(8)) |
+| Second external accuracy reference | One-shot Kaggle leaderboard submission at M-1 (§3.2) |
 
-| Lost with M4/M5 | Consequence | Substitute |
-|---|---|---|
-| **Modality generality** | H1–H4 bound to vision CNNs on 32×32 inputs. Nothing in the results speaks to audio, tabular or sequence models. | **None.** Stated as a limit in §1 and §13 — in the hypothesis wording itself, not only in a caveat section |
-| **Dense-tap contrast (D-dense)** | Every tap is now a conv tap; §5.2's 22-feature dense variant is never exercised by a model, and §9.6(3) loses its cross-dataset experiment | **Block-D ablation on conv taps** (§9.6 item 3): zero the channel-structure features and re-measure. Same question — does the method depend on convolutional structure — on the same data, more cheaply, and without a second dataset's confounds |
-| **Independent confounder corroboration** | CIFAR-10-C is the sole §9.6(8) evidence; no second suite to cross-check a "partly a novelty detector" finding | **Internal replication**: per-corruption-type and per-family reporting (§9.6(8)), so 15 types × 5 severities carry the spread a second suite used to |
-| **Second external accuracy reference** | M-1 validates against CIFAR references only; a systematic pipeline error affecting both models equally would pass unseen | **One-shot Kaggle leaderboard submission** at M-1 (§3.2) — cheap, independent, and now worth actually doing rather than merely permitted |
-| **Embedded deployment narrative** | v1.0's always-on-KWS-on-MCU story was the sharpest motivation for the §2 threat model | Argue from **DeepHammer**, which demonstrated this attack on this class of model. Weaker rhetorically, not technically |
-| **Security-control narrative** | M5's "attacker blinds an intrusion detector" was self-motivating | **None.** Do not pretend otherwise |
+**Reinvestment priority** — reinvested in depth on M2/M3, not banked:
 
-**What is freed.** M4 and M5's training, grids, tap plumbing and separate preprocessing paths all
-disappear, and with them roughly half the project's non-primary compute. That budget is **reinvested
-in depth on M2/M3, not banked**, in this priority order:
+1. **More seeds** (§9.5) — tightens every confidence interval, including H1's paired bootstrap.
+2. **The extended tap sets** on both models (§5.1) — more range for H2 and H3.
+3. **The L2 adaptive attacker** (§10).
+4. **Full INT8 parity**, so every FP32 result has an INT8 counterpart.
 
-1. **More seeds** (§9.5) — tightens every confidence interval in the thesis, including H1's paired
-   bootstrap. The cheapest quality gain available.
-2. **The extended 13-tap configuration** on both models rather than the default 6 — H2 (fusion beats
-   best single layer) and H3 (minimal configuration) both get more to say.
-3. **The L2 adaptive attacker** (§10) — the addition that raises this above a purely empirical
-   detection study, and formerly first on the cut list (§0).
-4. **Full INT8 parity**, so every FP32 result has an INT8 counterpart rather than a subset.
-
-This reinvestment is a plan, not a guarantee: M-0 (§12) measures the actual throughput and confirms
-how much of it the schedule can absorb.
+This is a plan, not a guarantee: M-0 (§12) measures throughput and sizes how much of it the schedule
+can absorb.
 
 ---
 
@@ -476,17 +338,13 @@ statistically ideal value, the reduction and its cost are recorded rather than s
   weight tensor, so the `bf_b` full grid re-samples a smaller target pool — record the per-layer bias
   parameter count alongside the results, since coverage of that pool is much denser than for weights
   and that changes how the two arms compare.
-- **Model coverage.** M2 and M3 both run the **full grid in both FP32 and INT8**. There is no
-  confirmatory-subset tier in v2.0 — the arms that ran one (M4, M5) are withdrawn (§3.3), so every
-  model in the project runs the full grid.
+- **Model coverage.** M2 and M3 both run the **full grid in both FP32 and INT8**.
 
 Net: ≈ 4,500 injections × 32 probes ≈ 144k forward passes per model / fault mode / precision / seed,
 and two full-grid fault modes per model rather than one.
 
-**Compute caveat — still the live budget risk.** ResNet-20 at ≈41 MFLOP/image is roughly an order of
-magnitude above the model the v1.0 grid was sized against, and M2/M3 each run the full grid in two
-precisions. Dropping M4/M5 returns budget (§3.3) but does **not** resolve this: the freed capacity is
-earmarked for more seeds and the extended tap set, both of which consume it. **M-0 (§12) must
+**Compute caveat — the live budget risk.** ResNet-20 costs ≈41 MFLOP/image and M2/M3 each run the
+full grid in two precisions; the §3.3 reinvestments consume any slack. **M-0 (§12) must
 re-measure throughput before any sweep is launched**, and if the budget is short the cut order is:
 reinvestments from §3.3 first (extended taps, extra seeds — they are gains, not commitments), then
 repetitions 100 → 50, then the INT8 arm of M3 — **never M2's INT8 arm**, which is the project's only
@@ -580,14 +438,12 @@ observations). Tap set per model is declared in config, defaulting to:
 Every model must clear the ≥ 5 usable taps required by §3.1 before it enters the study. A tap registry
 maps each tap to a stable string ID so configurations are comparable across models.
 
-**Every tap in v2.0 is a 2-D conv tap** (or the pooled/logit vectors derived from one), since M4's
-depthwise-separable blocks and M5's MLP residual blocks are withdrawn (§3.3). §5.2's dense variant
-therefore has no model exercising it — see the note there.
+**Every tap is a 2-D conv tap** (or the pooled/logit vectors derived from one), so §5.2's dense
+variant has no model exercising it.
 
-The extended tap sets exist for the H3 K-sweep (§9.6(1)): a 13-point tap budget gives the greedy
-forward selection somewhere to search. With the budget freed in §3.3, **the extended sets are now
-planned for both models rather than reserved for the sweep alone**. Headline results use the default
-sets unless the sweep shows otherwise, and the set used is recorded with every number.
+The extended tap sets give the H3 K-sweep (§9.6(1)) somewhere to search, and are planned for both
+models (§3.3). Headline results use the default sets unless the sweep shows otherwise, and the set
+used is recorded with every number.
 
 ### 5.2 Per-tap feature vector (the monitoring contract)
 
@@ -598,7 +454,7 @@ bounded.
 
 The contract is specified for all three activation shapes and stays that way: it is what makes the
 descriptor architecture-independent, and what lets a later study add a non-conv model without
-redesigning the monitor. **In v2.0 only the 2-D conv path is exercised by a model** (§3.3).
+redesigning the monitor. **Only the 2-D conv path is exercised by a model.**
 
 **Block A — distributional shape (9 features)**
 mean, std, min, max, and quantiles q01, q25, q50, q75, q99 of the activation values.
@@ -619,7 +475,7 @@ block is undefined for a dense tap.
   of per-channel spatial means; mean and std of per-channel spatial stds.
 - **D-dense (4) — dense/MLP taps**: Shannon entropy of the normalised unit-activation energy
   distribution; top-1, top-2, top-4 unit energy shares. The four spatial statistics have no analogue
-  and are zero-padded. **No model in v2.0 produces a dense tap** — the variant is retained in the
+  and are zero-padded. **No model produces a dense tap** — the variant is retained in the
   contract for shape-completeness and tested on synthetic tensors (§11.4), not by a model.
 
 **Block E — cross-layer (3, computed at fusion time)**
@@ -627,14 +483,11 @@ ratio of this tap's L2 to the previous tap's L2; ratio of its entropy to the pre
 the difference of its saturation ratio from the previous tap's.
 
 Total: **29 features per conv tap, 22 per dense tap** (9+4+5+4), fixed-width and
-architecture-independent, with zero-padding keeping widths comparable across taps. Every tap in v2.0
-is a conv tap, so **29 is the operative width throughout**.
+architecture-independent, with zero-padding keeping widths comparable across taps. Every tap is a
+conv tap, so **29 is the operative width throughout**.
 
-**The question D-dense used to answer is now answered by ablation.** v1.1 measured whether the method
-depends on convolutional structure by comparing a conv-tap model against a dense-tap one. With M5
-withdrawn, §9.6 item 3 instead **zeroes D-conv's channel-structure features on M2/M3 taps** and
-re-measures — the same question, on the same data, without confounding structure against dataset.
-This is a genuine substitute and is argued as one in §3.3, not a quiet deletion.
+Whether the method depends on convolutional structure is tested by ablation: §9.6 item 3 **zeroes
+D-conv's channel-structure features on M2/M3 taps** and re-measures.
 
 **A note on ResNet taps specifically.** Tapping the *output* of a residual block observes
 `F(x) + x`, which means the skip path can carry a clean signal that partially masks a fault injected
@@ -686,7 +539,7 @@ SGDOneClassSVM(nu=…))` is used; the approximation gap versus exact `OneClassSV
 because it is a reported number, and M1 produces no thesis result (§3).
 
 > Whether this path is needed at all is a measurement, not an assumption. `clean_fit` on CIFAR-10 is
-> 30,000 samples — small enough that exact `OneClassSVM` may well fit — but the extended 13-tap fused
+> 6,000 samples — small enough that exact `OneClassSVM` should fit (M-0 measured it) — but the extended 13-tap fused
 > feature vector (13 × 29 ≈ 377 dimensions) is wide, and §3.3 makes the extended set the planned
 > configuration rather than a sweep-only one. Measure before assuming either way.
 
@@ -726,7 +579,7 @@ Systems baselines (context, not competitors):
   internal-state monitoring honestly: it is for the cases a checksum cannot cover (transient faults,
   faults outside checksum scope, and situations where re-hashing every inference is too expensive).
 
-Attack-side reference — the point of the dataset choice, and in v2.0 the only external anchor:
+Attack-side reference — the project's only external anchor:
 - The **L1 (BFA) attacker is validated against published results** before it is used to generate
   faults: its flip-budget-versus-accuracy curve on INT8 ResNet-20 / CIFAR-10 is compared to the
   literature and the comparison is reported as a figure. A reimplementation that collapses the model
@@ -736,14 +589,11 @@ Attack-side reference — the point of the dataset choice, and in v2.0 the only 
 **Excluded by C1:** the Mahalanobis OOD score and `EllipticEnvelope` / `MinCovDet`
 (robust-covariance). KDE, LOF and Isolation Forest fill the density-baseline role instead.
 
-**C1 needs its most active guarding here, and v2.0 raises the stakes.** With CIFAR-10 as the sole
-dataset, every baseline question an examiner asks will be a vision-anomaly-detection question: the
-Lee et al. (2018) class-conditional Mahalanobis score is *the* canonical OOD/anomaly baseline on
-CIFAR-10, it is what a vision-literate examiner will ask for by name, and every tutorial
-implementation a well-meaning contributor might copy includes it. The answer is unchanged — the §0
-rationale plus the KDE/LOF/IF substitutes — but the thesis paragraph required by §14(4) must be
-written to pre-empt the question rather than to answer it defensively, and the §11.4 grep-based guard
-against banned constructs is not optional.
+**C1 needs its most active guarding here.** The Lee et al. (2018) class-conditional Mahalanobis score
+is *the* canonical OOD/anomaly baseline on CIFAR-10: a vision-literate examiner will ask for it by
+name, and every tutorial implementation a contributor might copy includes it. The thesis paragraph
+required by §14(4) must pre-empt the question rather than answer it defensively, and the §11.4
+grep-based guard against banned constructs is not optional.
 
 ---
 
@@ -751,9 +601,9 @@ against banned constructs is not optional.
 
 | Split | Content | Used for |
 |---|---|---|
-| `clean_fit` | 60 % of clean inference records | Fitting normaliser + SVDD |
-| `clean_cal` | 20 % | Threshold calibration, score CDF mapping, hyperparameter selection |
-| `clean_test` | 20 % | FPR measurement |
+| `clean_fit` | 60 % of the 10,000 classifier-held-out Kaggle images (6,000) | Fitting normaliser + SVDD |
+| `clean_cal` | 20 % (2,000) | Threshold calibration, score CDF mapping, hyperparameter selection |
+| `clean_test` | 20 % (2,000) | FPR measurement |
 | `fault_dev` | Random 30 % of injection **instances**, drawn across the full §4.2 grid, excluding the reserved configurations below | Development, sanity checks only |
 | `fault_test` | The disjoint remaining 70 % of instances, spanning the **full grid** — all 3 layer buckets, all 5 bit strata, all budgets, all fault modes — plus all L1/L2 attacks | Headline results |
 | `fault_gen` | A tagged subset **of `fault_test`**: the configurations deliberately never sampled into `fault_dev` (bit stratum {sign}, budget {4}) | Unseen-configuration generalisation, reported separately |
@@ -769,9 +619,10 @@ Generalisation to unseen fault configurations is a real claim, so it keeps its o
 `fault_gen` — rather than being bought at the cost of the headline's coverage. It is reported as a
 separate row, never merged into the headline number.
 
-Input samples underlying clean and fault records are drawn from the same held-out pool — the
-canonical labelled CIFAR-10 test images (§3.2), for every model in the study — so detection cannot be
-attributed to input distribution shift.
+Input samples underlying clean and fault records are all held out from classifier training (§3.2):
+`clean_*` from the 10,000 Kaggle images outside `train`, fault probes from the canonical test set, for
+every model in the study — so detection cannot be attributed to a seen-versus-unseen input shift.
+Clean inference on the probe pool itself is also recorded, for the §4.3 taxonomy.
 
 An automated leakage check runs before every results build and fails it on any of:
 - a fault record ID appearing in any fitting or calibration set;
@@ -839,9 +690,8 @@ first alarm.
 **Reported separately for M2 (residual) and M3 (plain), and the difference between them is the
 result.** Skip connections give a fault an alternate propagation path, so ρ and mean propagation
 depth should differ measurably between the two. Because M2 and M3 consume identical inputs (§3), any
-difference is attributable to topology rather than to representation — a confound that earlier
-cross-modality pairings could not rule out, and the reason this lineup is a better H4 instrument than
-v1.0's despite using one dataset. The pre-/post-addition tap flag (§5.2) is used to check whether the
+difference is attributable to topology rather than to representation. The pre-/post-addition tap
+flag (§5.2) is used to check whether the
 residual model's first alarms concentrate on pre-addition taps.
 
 ### 9.3 Latency metrics
@@ -906,38 +756,29 @@ never as a win.
    downgrade**, zeroing the four per-channel spatial statistics so conv taps carry the same 22-feature
    descriptor a dense tap would (§5.2), and re-measure TPR@1%FPR. A large drop says the method depends
    on channel-spatial structure and would transfer poorly to dense architectures; a small one says the
-   descriptor's power is in Blocks A–C and the method is more portable than it looks. **This replaces
-   v1.1's cross-dataset conv-vs-dense comparison** (§3.3) and is the better instrument: it varies the
-   feature set alone, where the old design varied feature set, architecture, modality and dataset
-   together and could not attribute the gap to any one of them. Report it on both models — agreement
-   between a residual and a plain network strengthens whichever way it lands.
+   descriptor's power is in Blocks A–C and the method is more portable than it looks. It varies the
+   feature set alone. Report it on both models — agreement between a residual and a plain network
+   strengthens whichever way it lands.
 4. **Precision** — FP32 vs INT8, on M2 and M3. A headline-adjacent result rather than a
    side-ablation, since INT8 is the regime the attack literature operates in (§3) and the only arm
    carrying external comparability.
-5. **Training budget** — clean fitting samples ∈ {500, 2k, 10k, 30k}; establishes the minimum
-   calibration data a deployer needs. Upper bound is 30k rather than 50k because `clean_fit` is 60 %
-   of CIFAR-10's 50,000 training images (§3.2).
+5. **Training budget** — clean fitting samples ∈ {500, 1k, 2k, 6k}; establishes the minimum
+   calibration data a deployer needs. Upper bound is 6k because `clean_fit` is 60 % of the 10,000
+   images held out from classifier training (§3.2).
 6. **Kernel sensitivity** — RBF vs polynomial vs linear SVDD.
 7. **Transfer** — detector fitted on M2 applied to M3 taps (expected to fail; documents that the
-   monitor is model-specific, which is a deployment cost worth stating). Note that M2→M3 is now a
-   *same-data, different-topology* transfer, which is a cleaner and more interesting test than v1.0's
-   cross-representation transfer: a failure here isolates architecture-specificity from
-   input-distribution-specificity.
+   monitor is model-specific, which is a deployment cost worth stating). Because M2 and M3 share
+   inputs, a failure isolates architecture-specificity from input-distribution-specificity.
 8. **Input-shift confounder** — score clean-but-shifted inputs to quantify how much of the detector's
    signal is "fault" versus "anything unusual". A monitor that fires equally on both is a novelty
    detector, not a fault detector, and the thesis must say so if that is what the data shows.
 
-   **Source: CIFAR-10-C** — 15 corruption types × 5 severities over the same 10,000 test images
-   (§3.2), on both M2 and M3. A standard, citable, severity-graded suite with nothing to defend.
-
-   **This is now the sole evidence for the thesis's central caveat**, where v1.1 had a second,
-   independent measurement from another modality (§3.3). Two reporting requirements follow, and
-   neither is optional:
+   **Source: CIFAR-10-C** (§3.2), on both M2 and M3. It is the only evidence for the thesis's central
+   caveat (§3.3), so two reporting requirements are mandatory:
 
    - **Report per corruption type, never only the aggregate.** A monitor that fires on
      `gaussian_noise` but not on `fog` is telling you which §5.2 blocks are doing the work, and
-     collapsing to one number discards the internal replication that now has to stand in for the lost
-     second suite.
+     collapsing to one number discards the internal replication.
    - **Report by corruption family** — noise, blur, weather, digital — and state whether the
      detector's response is consistent across families or driven by one. A response confined to a
      single family is a materially different finding from a uniform one, and only the family
@@ -971,14 +812,14 @@ Run L2 on M2 INT8 first for this reason.
 
 Python 3.11 · PyTorch 2.x + torchvision (CIFAR-10 loading, canonical test split) · scikit-learn 1.7 ·
 NumPy · pandas/pyarrow · `py7zr` or system `7z` for the Kaggle archives · Hydra or plain YAML configs
-· pytest. **torchaudio is no longer a dependency** (§3.3). No dependency on a fault-injection
+· pytest. No dependency on a fault-injection
 framework is assumed; injection is ~200 lines of local code (§4.4) and stays auditable.
 
 ### 11.2 Layout
 
 ```
-HK-2026/
-├── SPEC.md
+R-D/
+├── docs/SPEC.md
 ├── configs/
 │   ├── data/cifar10.yaml
 │   ├── model/{resnet8,resnet20,vgg11bn}.yaml
@@ -1042,11 +883,11 @@ liability unless it is recorded, and this is how it is recorded.
 - **Tap budget:** every model in §3 exposes ≥ 5 usable taps, asserted from the tap registry.
 - **Feature-block population:** D-conv is non-zero for all conv taps (ResNet, VGG) — an all-zero block
   means a silently misapplied variant. **D-dense is tested on synthetic `R^{N×D}` tensors**, not on a
-  model: no model in v2.0 produces a dense tap (§5.2), but the code path stays live because §9.6(3)'s
+  model: no model produces a dense tap (§5.2), but the code path stays live because §9.6(3)'s
   Block-D downgrade exercises the same 22-feature width, and an untested path would make that
   ablation's result untrustworthy.
-- Leakage guard (§7) as a failing test, not a comment — including the assertion that the CIFAR-10
-  channel statistics were fit on `clean_fit` only.
+- Leakage guard (§7) as a failing test, not a comment — including the assertions that the CIFAR-10
+  channel statistics were fit on `train` only and that `train` is disjoint from every detector split.
 - Feature determinism: identical input ⇒ identical feature vector across runs.
 - Overhead harness sanity: monitor-off path is statistically indistinguishable from the unmodified
   model.
@@ -1089,22 +930,21 @@ M-8 is what raises the work above a purely empirical detection study.
 | Risk | Impact | Mitigation |
 |---|---|---|
 | Faults are trivially detectable (exponent-MSB flips dominate) | Results look strong but say nothing | Bit-strata stratification (§4.2) and per-stratum reporting (§9.1) are mandatory, not optional |
-| Detector is really a generic novelty detector | Claim of *fault* detection unsupported — **the thesis's central caveat, and v2.0 removed its corroborating measurement** | §9.6(8) measures it directly on CIFAR-10-C. With no second modality to cross-check (§3.3), the per-type and per-family breakdowns are **mandatory, not presentational**: they are what carries the evidential weight a second suite used to. Report the finding either way |
+| Detector is really a generic novelty detector | Claim of *fault* detection unsupported — **the thesis's central caveat** | §9.6(8) measures it directly on CIFAR-10-C. The per-type and per-family breakdowns are **mandatory, not presentational** (§3.3). Report the finding either way |
 | INT8 faults too subtle to detect | H1 fails in the quantised regime — **and this is now the comparability arm** | Report FP32/INT8 separately; a negative INT8 result is a legitimate, publishable finding, but it would cost the §3.1 rationale, so it must not be discovered late (§9.6 item 4 runs at M-5, not M-7) |
 | SVDD does not scale to fused high-dimensional features | Fitting time blows up | Nystroem + `SGDOneClassSVM` path (§6.1), with the approximation gap measured. Extended 13-tap fusion is ~377-d, and §3.3 makes the extended set the *planned* configuration rather than a sweep-only one, so this path is likelier to be exercised than it was |
 | Overhead exceeds any plausible deployment budget | H3 fails | K sweep finds the Pareto front; report the minimum viable K honestly even if it is "all taps" |
 | Persistent-fault setting makes windowed detection near-trivial | Overstated results | Per-inference numbers are reported alongside windowed ones, always |
 | **§4.2 grid does not fit — two models × two precisions × full grid** | Schedule overrun, or a silently truncated grid | M-0 gate re-measures before any sweep. Cut order: §3.3 reinvestments first (they are gains, not commitments), then repetitions 100 → 50, then M3's INT8 arm — **never M2's**. **Bit strata are never cut** — they keep §9.1 honest |
-| **BFA reimplementation is wrong** | The external comparison is worthless, and the fault population it generates is unrepresentative. **In a single-dataset design this is the only external anchor the project has** | M-1b gate validates the flip-budget curve against published figures *before* the detection sweep runs |
-| **Kaggle `test.7z` is unusable (290k dummies, no public labels)** | Would silently break §4.3 taxonomy labelling if assumed usable | Resolved by design (§3.2): training data from Kaggle, labelled held-out pool from canonical CIFAR-10, `test.7z` not downloaded; §11.4 asserts source disjointness and label agreement |
+| **BFA reimplementation is wrong** | The external comparison is worthless, and the fault population it generates is unrepresentative. **This is the only external anchor the project has** | M-1b gate validates the flip-budget curve against published figures *before* the detection sweep runs |
 | **Reviewer demands the Mahalanobis OOD baseline** | C1 reads as an oversight on the dataset where that baseline is canonical | §6.4: pre-empt in the §14(4) methods paragraph rather than answering defensively; §11.4 grep guard prevents accidental reintroduction |
-| **CIFAR-10 read as a toy / saturated benchmark** | Perceived lack of ambition | §3.1 objection 1: the object of study is the detector, not the classifier, and saturation sharpens the M-1 gate. No claim is made about ImageNet-scale networks |
-| **No evidence the method generalises beyond vision CNNs** | **H1–H4 are bounded to one modality.** v1.1 bounded this with M4/M5; v2.0 does not bound it at all | **Stated, never implied away.** The hypotheses in §1 are worded as claims about vision CNNs on 32×32 inputs; the thesis says plainly that audio, tabular and sequence models are untested here. §3.3 argues the trade — a narrower claim fully supported beats a broad claim resting on two confirmatory subsets — and §9.6(3)'s Block-D downgrade gives *indirect* evidence about dependence on convolutional structure. Indirect is not the same as a second modality, and must not be written as if it were |
+| **CIFAR-10 read as a toy / saturated benchmark** | Perceived lack of ambition | Dataset.md §9, objection 1: the object of study is the detector, not the classifier, and saturation sharpens the M-1 gate. No claim is made about ImageNet-scale networks |
+| **No evidence the method generalises beyond vision CNNs** | **H1–H4 are bounded to one modality**, and nothing in the design bounds it further | **Stated, never implied away.** The hypotheses in §1 are worded as claims about vision CNNs on 32×32 inputs; the thesis says plainly that audio, tabular and sequence models are untested here. §9.6(3)'s Block-D downgrade gives *indirect* evidence about dependence on convolutional structure. Indirect is not the same as a second modality, and must not be written as if it were |
 | **No evidence the method scales beyond 32×32 / ~300k-parameter models** | Generality of H1–H4 further bounded, on a second axis | Stated as a limit, not implied away. Nothing in this design bounds the *scale* claim and no such claim is made |
-| **"One dataset" read as insufficient rigour** | Reviewer objection to the whole design | §3.1a objection 3: the contract requires variation across *architectures and fault models*, and M2/M3 × 4 fault modes × 5 bit strata × 2 precisions delivers it. The single-dataset choice is argued in §3.1 and its cost accounted in §3.3 — a decision on the record, not an omission |
-| **Both models fail M-1 for the same systematic reason** | A pipeline error affecting M2 and M3 equally passes the accuracy gate unnoticed; v1.1 would have caught it via a second benchmark family | Take the one-shot Kaggle leaderboard submission at M-1 (§3.2) — it is the only remaining independent accuracy check, and it is cheap |
+| **"One dataset" read as insufficient rigour** | Reviewer objection to the whole design | The contract requires variation across *architectures and fault models*, and M2/M3 × 4 fault modes × 5 bit strata × 2 precisions delivers it. The choice is argued in Dataset.md §9–§10 and its cost accounted in §3.3 — a decision on the record, not an omission |
+| **Both models fail M-1 for the same systematic reason** | A pipeline error affecting M2 and M3 equally passes the accuracy gate unnoticed | Take the one-shot Kaggle leaderboard submission at M-1 (§3.2) — it is the only remaining independent accuracy check, and it is cheap |
 | **Freed budget is banked rather than reinvested** | The single-dataset design's main compensating benefit never materialises; the thesis is simply smaller | §3.3 fixes the reinvestment priority *before* the budget appears, and M-0 sizes it. Reinvestment is planned work, not spare capacity |
-| **CIFAR-10 train/test near-duplicates (~3.3 %, Barz & Denzler 2020)** | Probe pool marginally less independent of `clean_fit` than the split table implies; not a C2 violation, since no record is in two splits, but the pixel-hash guard catches exact duplicates only | Stated as a dataset-level limit, not implied away (`Dataset.md` §2.4). If the effect is ever suspected of mattering, re-run the headline with the published near-duplicate list removed from the probe pool |
+| **CIFAR-10 train/test near-duplicates (~3.3 %, Barz & Denzler 2020)** | Probe pool marginally less independent of `clean_fit` than the split table implies; not a C2 violation, since no record is in two splits, but the pixel-hash guard catches exact duplicates only | Stated as a dataset-level limit, not implied away (`Dataset.md` §5.2). If the effect is ever suspected of mattering, re-run the headline with the published near-duplicate list removed from the probe pool |
 | Schedule slip | Scope must shrink | Cut in the C0 order (§0): §3.3 reinvestments first (extended taps, extra seeds — planned gains, not commitments), then the adaptive attacker (§10), then `sa`/`rnd_val`/`bf_act`, then D4 — before any §9.6 ablation. `bf_w`/`bf_b` coverage, both §4.3 tracks, and M2/M3 are contract commitments and are never cut. **The INT8 arm of M2 is effectively uncuttable** (§0): it is the project's only external anchor |
 
 ---
@@ -1124,11 +964,6 @@ M-8 is what raises the work above a purely empirical detection study.
    statement, objective, secondary objective, each proposed technical direction, and each named
    evaluation metric — to the section and result that discharges it. Additions (§0, C0) are listed
    separately so the distinction between commitment and extra is visible to an examiner.
-7. **A dataset-scope note** recording both decisions on the record: the v1.1 withdrawal of the "no
-   image datasets" constraint and the comparability gain that motivated it, and the v2.0 narrowing to
-   **CIFAR-10 alone** — what it removed (modality breadth, the dense-tap contrast, the corroborating
-   confounder measurement), what substitutes for each (§3.3), and what the freed budget bought. A
-   study that changes its dataset scope mid-project should say so plainly rather than present the
-   final design as though it were always the plan. **Pair it with the §13 modality bound**: the note
-   explains the decision, the bound states its consequence, and an examiner should find both without
-   having to ask.
+7. **A dataset-scope note** stating the move to CIFAR-10 alone, what it removed, what substitutes for
+   each loss (§3.3) and what the freed budget bought (source: Dataset.md §10–§11). **Pair it with the
+   §13 modality bound**: the note explains the decision, the bound states its consequence.

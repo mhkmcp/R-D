@@ -4,7 +4,7 @@
 
 | Split | Content | Used for |
 |---|---|---|
-| `clean_fit` | 60 % of clean records | Normaliser + SVDD fit |
+| `clean_fit` | 60 % of the 10k classifier-held-out Kaggle images (6k) | Normaliser + SVDD fit |
 | `clean_cal` | 20 % | Thresholds, score-CDF mapping, ν/γ selection |
 | `clean_test` | 20 % | FPR measurement |
 | `fault_dev` | Random 30 % of injection **instances** across the full grid, excluding `fault_gen` configs | Dev / sanity only |
@@ -94,7 +94,7 @@ before visible harm? Needs its own figure.
    the 4 per-channel spatial stats) and re-measure TPR@1%FPR. Replaces v1.1's cross-dataset contrast.
    Indirect evidence only — never written up as a substitute for a second modality.
 4. **Precision** FP32 vs INT8 on M2 and M3 — runs at **M-5**, not M-7.
-5. **Training budget** — clean fit n ∈ {500, 2k, 10k, 30k}.
+5. **Training budget** — clean fit n ∈ {500, 1k, 2k, 6k}.
 6. **Kernel** — RBF vs polynomial vs linear.
 7. **Transfer** — fit on M2, apply to M3 (expected to fail; same-data, different-topology).
 8. **Input-shift confounder (CIFAR-10-C)** — clean inputs only, never combined with faults. Mandatory:

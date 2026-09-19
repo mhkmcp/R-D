@@ -25,6 +25,6 @@ svdd:                      # §6.1: measure exact OneClassSVM before assuming Ny
   nus: [0.001, 0.01, 0.1]  # span of the §6.3 grid; SV count (and cost) grows with ν
   dims: [29, 174, 377]     # one tap; 6-tap fused; 13-tap fused
   data: [gaussian, heavy]  # heavy = Student-t with spread scales, the pessimistic case
-  full:  {n: [2000, 10000, 30000]}
-  quick: {n: [2000, 5000]}
+  full:  {n: [1000, 2000, 6000]}   # §9.6(5) training-budget points; 6000 = clean_fit (§3.2)
+  quick: {n: [1000, 2000]}
   score_n: 10000
