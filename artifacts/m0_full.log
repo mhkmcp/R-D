@@ -1,0 +1,165 @@
+uv run python -m fidnn bench m0
+[m0] m1 cpu fp32 bs=1 off/-: 0.364 ms
+[m0] m1 cpu fp32 bs=1 capture/default: 0.370 ms
+[m0] m1 cpu fp32 bs=1 capture/extended: 0.370 ms
+[m0] m1 cpu fp32 bs=1 features/default: 1.353 ms
+[m0] m1 cpu fp32 bs=1 features/extended: 1.352 ms
+[m0] m1 cpu fp32 bs=32 off/-: 15.687 ms
+[m0] m1 cpu fp32 bs=32 capture/default: 16.038 ms
+[m0] m1 cpu fp32 bs=32 capture/extended: 16.396 ms
+[m0] m1 cpu fp32 bs=32 features/default: 28.786 ms
+[m0] m1 cpu fp32 bs=32 features/extended: 33.926 ms
+[m0] m1 cpu int8 bs=1 off/-: 0.410 ms
+[m0] m1 cpu int8 bs=1 capture/default: 0.427 ms
+[m0] m1 cpu int8 bs=1 capture/extended: 0.427 ms
+[m0] m1 cpu int8 bs=1 features/default: 1.510 ms
+[m0] m1 cpu int8 bs=1 features/extended: 1.476 ms
+[m0] m1 cpu int8 bs=32 off/-: 4.193 ms
+[m0] m1 cpu int8 bs=32 capture/default: 5.482 ms
+[m0] m1 cpu int8 bs=32 capture/extended: 5.520 ms
+[m0] m1 cpu int8 bs=32 features/default: 21.340 ms
+[m0] m1 cpu int8 bs=32 features/extended: 20.904 ms
+[m0] m1 mps fp32 bs=1 off/-: 0.782 ms
+[m0] m1 mps fp32 bs=1 capture/default: 0.736 ms
+[m0] m1 mps fp32 bs=1 capture/extended: 0.730 ms
+[m0] m1 mps fp32 bs=1 features/default: 4.309 ms
+[m0] m1 mps fp32 bs=1 features/extended: 4.295 ms
+[m0] m1 mps fp32 bs=32 off/-: 1.006 ms
+[m0] m1 mps fp32 bs=32 capture/default: 1.702 ms
+[m0] m1 mps fp32 bs=32 capture/extended: 1.331 ms
+[m0] m1 mps fp32 bs=32 features/default: 8.415 ms
+[m0] m1 mps fp32 bs=32 features/extended: 8.385 ms
+[m0] m2 cpu fp32 bs=1 off/-: 1.340 ms
+[m0] m2 cpu fp32 bs=1 capture/default: 1.186 ms
+[m0] m2 cpu fp32 bs=1 capture/extended: 1.181 ms
+[m0] m2 cpu fp32 bs=1 features/default: 2.212 ms
+[m0] m2 cpu fp32 bs=1 features/extended: 3.979 ms
+[m0] m2 cpu fp32 bs=32 off/-: 53.193 ms
+[m0] m2 cpu fp32 bs=32 capture/default: 54.645 ms
+[m0] m2 cpu fp32 bs=32 capture/extended: 55.294 ms
+[m0] m2 cpu fp32 bs=32 features/default: 79.207 ms
+[m0] m2 cpu fp32 bs=32 features/extended: 98.813 ms
+[m0] m2 cpu int8 bs=1 off/-: 1.141 ms
+[m0] m2 cpu int8 bs=1 capture/default: 1.172 ms
+[m0] m2 cpu int8 bs=1 capture/extended: 1.199 ms
+[m0] m2 cpu int8 bs=1 features/default: 2.317 ms
+[m0] m2 cpu int8 bs=1 features/extended: 4.201 ms
+[m0] m2 cpu int8 bs=32 off/-: 14.918 ms
+[m0] m2 cpu int8 bs=32 capture/default: 18.126 ms
+[m0] m2 cpu int8 bs=32 capture/extended: 17.982 ms
+[m0] m2 cpu int8 bs=32 features/default: 31.283 ms
+[m0] m2 cpu int8 bs=32 features/extended: 55.272 ms
+[m0] m2 mps fp32 bs=1 off/-: 2.596 ms
+[m0] m2 mps fp32 bs=1 capture/default: 1.999 ms
+[m0] m2 mps fp32 bs=1 capture/extended: 2.013 ms
+[m0] m2 mps fp32 bs=1 features/default: 5.097 ms
+[m0] m2 mps fp32 bs=1 features/extended: 9.357 ms
+[m0] m2 mps fp32 bs=32 off/-: 1.911 ms
+[m0] m2 mps fp32 bs=32 capture/default: 2.853 ms
+[m0] m2 mps fp32 bs=32 capture/extended: 3.164 ms
+[m0] m2 mps fp32 bs=32 features/default: 10.401 ms
+[m0] m2 mps fp32 bs=32 features/extended: 20.440 ms
+[m0] m3 cpu fp32 bs=1 off/-: 2.278 ms
+[m0] m3 cpu fp32 bs=1 capture/default: 2.431 ms
+[m0] m3 cpu fp32 bs=1 capture/extended: 2.454 ms
+[m0] m3 cpu fp32 bs=1 features/default: 3.960 ms
+[m0] m3 cpu fp32 bs=1 features/extended: 6.639 ms
+[m0] m3 cpu fp32 bs=32 off/-: 108.164 ms
+[m0] m3 cpu fp32 bs=32 capture/default: 106.161 ms
+[m0] m3 cpu fp32 bs=32 capture/extended: 107.371 ms
+[m0] m3 cpu fp32 bs=32 features/default: 132.519 ms
+[m0] m3 cpu fp32 bs=32 features/extended: 153.293 ms
+[m0] m3 cpu int8 bs=1 off/-: 2.151 ms
+[m0] m3 cpu int8 bs=1 capture/default: 2.029 ms
+[m0] m3 cpu int8 bs=1 capture/extended: 2.025 ms
+[m0] m3 cpu int8 bs=1 features/default: 3.201 ms
+[m0] m3 cpu int8 bs=1 features/extended: 5.900 ms
+[m0] m3 cpu int8 bs=32 off/-: 28.036 ms
+[m0] m3 cpu int8 bs=32 capture/default: 29.756 ms
+[m0] m3 cpu int8 bs=32 capture/extended: 30.421 ms
+[m0] m3 cpu int8 bs=32 features/default: 48.334 ms
+[m0] m3 cpu int8 bs=32 features/extended: 90.603 ms
+[m0] m3 mps fp32 bs=1 off/-: 1.824 ms
+[m0] m3 mps fp32 bs=1 capture/default: 4.839 ms
+[m0] m3 mps fp32 bs=1 capture/extended: 4.132 ms
+[m0] m3 mps fp32 bs=1 features/default: 5.575 ms
+[m0] m3 mps fp32 bs=1 features/extended: 7.639 ms
+[m0] m3 mps fp32 bs=32 off/-: 5.204 ms
+[m0] m3 mps fp32 bs=32 capture/default: 5.167 ms
+[m0] m3 mps fp32 bs=32 capture/extended: 5.171 ms
+[m0] m3 mps fp32 bs=32 features/default: 11.882 ms
+[m0] m3 mps fp32 bs=32 features/extended: 37.028 ms
+[m0] wrote inference.parquet (120 rows)
+[m0] m1 cpu fwd_bwd bs=128: 239.0 ms
+[m0] m1 cpu train_step bs=128: 249.6 ms
+[m0] m1 mps fwd_bwd bs=128: 14.0 ms
+[m0] m1 mps train_step bs=128: 23.8 ms
+[m0] m2 cpu fwd_bwd bs=128: 664.0 ms
+[m0] m2 cpu train_step bs=128: 635.6 ms
+[m0] m2 mps fwd_bwd bs=128: 50.3 ms
+[m0] m2 mps train_step bs=128: 48.0 ms
+[m0] m3 cpu fwd_bwd bs=128: 1097.2 ms
+[m0] m3 cpu train_step bs=128: 1051.6 ms
+[m0] m3 mps fwd_bwd bs=128: 93.4 ms
+[m0] m3 mps train_step bs=128: 88.2 ms
+[m0] wrote grad.parquet (12 rows)
+[m0] m1 injection costs measured (8 quantised layers)
+[m0] m2 injection costs measured (20 quantised layers)
+[m0] m3 injection costs measured (11 quantised layers)
+[m0] wrote injection.parquet (90 rows)
+[m0] OCSVM gaussian n=1000 d=29 nu=0.001: fit 0.00s, 92 SV
+[m0] OCSVM gaussian n=1000 d=29 nu=0.01: fit 0.00s, 98 SV
+[m0] OCSVM gaussian n=1000 d=29 nu=0.1: fit 0.00s, 139 SV
+[m0] OCSVM gaussian n=2000 d=29 nu=0.001: fit 0.00s, 138 SV
+[m0] OCSVM gaussian n=2000 d=29 nu=0.01: fit 0.01s, 139 SV
+[m0] OCSVM gaussian n=2000 d=29 nu=0.1: fit 0.01s, 245 SV
+[m0] OCSVM gaussian n=6000 d=29 nu=0.001: fit 0.02s, 183 SV
+[m0] OCSVM gaussian n=6000 d=29 nu=0.01: fit 0.02s, 186 SV
+[m0] OCSVM gaussian n=6000 d=29 nu=0.1: fit 0.09s, 629 SV
+[m0] OCSVM gaussian n=1000 d=174 nu=0.001: fit 0.00s, 144 SV
+[m0] OCSVM gaussian n=1000 d=174 nu=0.01: fit 0.00s, 147 SV
+[m0] OCSVM gaussian n=1000 d=174 nu=0.1: fit 0.01s, 163 SV
+[m0] OCSVM gaussian n=2000 d=174 nu=0.001: fit 0.01s, 163 SV
+[m0] OCSVM gaussian n=2000 d=174 nu=0.01: fit 0.01s, 168 SV
+[m0] OCSVM gaussian n=2000 d=174 nu=0.1: fit 0.03s, 269 SV
+[m0] OCSVM gaussian n=6000 d=174 nu=0.001: fit 0.04s, 221 SV
+[m0] OCSVM gaussian n=6000 d=174 nu=0.01: fit 0.05s, 224 SV
+[m0] OCSVM gaussian n=6000 d=174 nu=0.1: fit 0.22s, 676 SV
+[m0] OCSVM gaussian n=1000 d=377 nu=0.001: fit 0.01s, 173 SV
+[m0] OCSVM gaussian n=1000 d=377 nu=0.01: fit 0.01s, 184 SV
+[m0] OCSVM gaussian n=1000 d=377 nu=0.1: fit 0.02s, 205 SV
+[m0] OCSVM gaussian n=2000 d=377 nu=0.001: fit 0.03s, 204 SV
+[m0] OCSVM gaussian n=2000 d=377 nu=0.01: fit 0.04s, 222 SV
+[m0] OCSVM gaussian n=2000 d=377 nu=0.1: fit 0.07s, 301 SV
+[m0] OCSVM gaussian n=6000 d=377 nu=0.001: fit 0.12s, 253 SV
+[m0] OCSVM gaussian n=6000 d=377 nu=0.01: fit 0.16s, 258 SV
+[m0] OCSVM gaussian n=6000 d=377 nu=0.1: fit 0.64s, 689 SV
+[m0] OCSVM heavy n=1000 d=29 nu=0.001: fit 0.00s, 72 SV
+[m0] OCSVM heavy n=1000 d=29 nu=0.01: fit 0.00s, 76 SV
+[m0] OCSVM heavy n=1000 d=29 nu=0.1: fit 0.00s, 108 SV
+[m0] OCSVM heavy n=2000 d=29 nu=0.001: fit 0.01s, 151 SV
+[m0] OCSVM heavy n=2000 d=29 nu=0.01: fit 0.01s, 156 SV
+[m0] OCSVM heavy n=2000 d=29 nu=0.1: fit 0.01s, 220 SV
+[m0] OCSVM heavy n=6000 d=29 nu=0.001: fit 0.03s, 257 SV
+[m0] OCSVM heavy n=6000 d=29 nu=0.01: fit 0.03s, 262 SV
+[m0] OCSVM heavy n=6000 d=29 nu=0.1: fit 0.10s, 620 SV
+[m0] OCSVM heavy n=1000 d=174 nu=0.001: fit 0.00s, 109 SV
+[m0] OCSVM heavy n=1000 d=174 nu=0.01: fit 0.01s, 114 SV
+[m0] OCSVM heavy n=1000 d=174 nu=0.1: fit 0.01s, 128 SV
+[m0] OCSVM heavy n=2000 d=174 nu=0.001: fit 0.01s, 165 SV
+[m0] OCSVM heavy n=2000 d=174 nu=0.01: fit 0.02s, 170 SV
+[m0] OCSVM heavy n=2000 d=174 nu=0.1: fit 0.03s, 231 SV
+[m0] OCSVM heavy n=6000 d=174 nu=0.001: fit 0.08s, 308 SV
+[m0] OCSVM heavy n=6000 d=174 nu=0.01: fit 0.09s, 312 SV
+[m0] OCSVM heavy n=6000 d=174 nu=0.1: fit 0.28s, 626 SV
+[m0] OCSVM heavy n=1000 d=377 nu=0.001: fit 0.01s, 107 SV
+[m0] OCSVM heavy n=1000 d=377 nu=0.01: fit 0.01s, 114 SV
+[m0] OCSVM heavy n=1000 d=377 nu=0.1: fit 0.02s, 136 SV
+[m0] OCSVM heavy n=2000 d=377 nu=0.001: fit 0.02s, 154 SV
+[m0] OCSVM heavy n=2000 d=377 nu=0.01: fit 0.03s, 156 SV
+[m0] OCSVM heavy n=2000 d=377 nu=0.1: fit 0.06s, 226 SV
+[m0] OCSVM heavy n=6000 d=377 nu=0.001: fit 0.12s, 272 SV
+[m0] OCSVM heavy n=6000 d=377 nu=0.01: fit 0.14s, 274 SV
+[m0] OCSVM heavy n=6000 d=377 nu=0.1: fit 0.52s, 634 SV
+[m0] wrote svdd.parquet (72 rows)
+[m0] wrote docs/M0_throughput.md
