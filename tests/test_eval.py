@@ -126,6 +126,17 @@ def test_breakdowns_cover_every_mandatory_axis():
     assert set(table[table.axis == "label"].value) <= set(metrics.CATEGORIES)
 
 
+def test_breakdowns_survive_a_parquet_round_trip(tmp_path):
+    """`budget` is an int and the other axes are strings; they share one column (§9.1)."""
+    rng = np.random.default_rng(0)
+    scored = make_outcomes(seed=2).assign(precision="int8")
+    scored["score"] = rng.normal(3, 1, len(scored))
+    table = metrics.breakdowns(scored, rng.normal(0, 1, 300), {0.01: 2.0})
+    table.to_parquet(tmp_path / "breakdowns.parquet", index=False)
+    back = pd.read_parquet(tmp_path / "breakdowns.parquet")
+    assert set(back[back.axis == "budget"].value) == {"1", "4", "16"}
+
+
 def test_confusion_and_ranking_are_consistent():
     fault = np.array([3.0, 4.0, 5.0])
     clean = np.array([0.0, 1.0, 2.0])

@@ -1,0 +1,76 @@
+{
+  "model": "m1",
+  "precision": "fp32",
+  "tap_set": "default",
+  "taps": [
+    "stem",
+    "stage1",
+    "stage2",
+    "stage3",
+    "pooled",
+    "logits"
+  ],
+  "feature_names": [
+    "mean",
+    "std",
+    "min",
+    "max",
+    "q01",
+    "q25",
+    "q50",
+    "q75",
+    "q99",
+    "zero_frac",
+    "sat_frac",
+    "nan_count",
+    "inf_count",
+    "l1_rms",
+    "l2_rms",
+    "linf",
+    "peakiness",
+    "energy_gini",
+    "energy_entropy",
+    "top1_share",
+    "top2_share",
+    "top4_share",
+    "ch_mean_mean",
+    "ch_mean_std",
+    "ch_std_mean",
+    "ch_std_std"
+  ],
+  "saturation": {
+    "quantile": 0.999,
+    "fitted_on": "clean_fit",
+    "sample": 512,
+    "thresholds": {
+      "stem": 2.6451568603515625,
+      "stage1": 2.9820950031280518,
+      "stage2": 3.0977256298065186,
+      "stage3": 4.368884086608887,
+      "pooled": 1.4347432851791382,
+      "logits": 5.523428916931152
+    }
+  },
+  "counts": {
+    "clean_fit": 7200,
+    "clean_cal": 2400,
+    "clean_test": 2400
+  },
+  "git_commit": "26e2492cc792aa059fe1da8aa21b1a2ff56305fe-dirty",
+  "config_hash": "760e9426008f9b8f",
+  "config": {
+    "batch": 250,
+    "calib_n": 512,
+    "sat_quantile": 0.999,
+    "sat_sample": 512
+  },
+  "seed": 0,
+  "device": "cpu",
+  "versions": {
+    "python": "3.11.16",
+    "torch": "2.14.0",
+    "numpy": "2.4.6",
+    "sklearn": "1.7.2"
+  },
+  "timestamp": "2026-09-20T16:19:14+0600"
+}

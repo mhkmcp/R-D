@@ -1,0 +1,68 @@
+{
+  "model": "m2",
+  "precision": "int8",
+  "tap_set": "default",
+  "seed": 0,
+  "fault_probes": 144000,
+  "fault_split_counts": {
+    "fault_test": 120960,
+    "fault_dev": 23040
+  },
+  "localisation": {
+    "spearman": {
+      "n": 7543,
+      "rho": 0.07810530643086931,
+      "p_value": 5.501377955687346e-12,
+      "greater_than_zero": true
+    },
+    "propagation": {
+      "n": 7543,
+      "mean_depth": 1.1605462017764816,
+      "median_depth": 1.0
+    },
+    "confusion": {
+      "early": {
+        "early": 1318,
+        "middle": 1064,
+        "late": 1004
+      },
+      "middle": {
+        "early": 767,
+        "middle": 774,
+        "late": 767
+      },
+      "late": {
+        "early": 608,
+        "middle": 566,
+        "late": 675
+      },
+      "none": {
+        "early": 45307,
+        "middle": 45596,
+        "late": 45554
+      }
+    },
+    "pre_add_share": 0.0
+  },
+  "leakage": "passed",
+  "git_commit": "26e2492cc792aa059fe1da8aa21b1a2ff56305fe-dirty",
+  "config_hash": "2c884e26983276c8",
+  "config": {
+    "alphas": [
+      0.05,
+      0.01,
+      0.001
+    ],
+    "dev_share": 0.3,
+    "resamples": 2000,
+    "confidence": 0.95
+  },
+  "device": "cpu",
+  "versions": {
+    "python": "3.11.16",
+    "torch": "2.14.0",
+    "numpy": "2.4.6",
+    "sklearn": "1.7.2"
+  },
+  "timestamp": "2026-09-20T16:48:41+0600"
+}

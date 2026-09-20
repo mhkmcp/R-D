@@ -69,5 +69,7 @@ def breakdowns(scored: pd.DataFrame, clean_scores: np.ndarray, taus: dict[float,
         if axis not in scored:
             continue
         df = by_track(scored, clean_scores, taus, extra_keys=(axis,))
-        frames.append(df.rename(columns={axis: "value"}).assign(axis=axis))
+        # axes of different dtypes share one column (`budget` is an int), so it must be one type
+        frames.append(df.rename(columns={axis: "value"})
+                        .assign(value=lambda d: d.value.astype(str), axis=axis))
     return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()

@@ -1,0 +1,60 @@
+{
+  "normalisation": {
+    "mean": [
+      0.4918024031132608,
+      0.4824589142979722,
+      0.4469411453672584
+    ],
+    "std": [
+      0.24687969613836505,
+      0.2434911937957357,
+      0.2616229154281079
+    ],
+    "fitted_on": "train"
+  },
+  "counts": {
+    "train": 40000,
+    "clean_fit": 6000,
+    "clean_cal": 2000,
+    "clean_test": 2000
+  },
+  "probe_pool": {
+    "source": "torchvision CIFAR10(train=False)",
+    "n": 10000
+  },
+  "integrity": {
+    "kaggle_vs_canonical_test_collisions": 0,
+    "label_agreement": {
+      "checked": 5000,
+      "matched": 5000,
+      "mismatched": 0
+    }
+  },
+  "sha256": {
+    "train.7z": "3e64045659dd860c8357cb7b44a180ad4ff98eb876a4f73386688fd55938457b",
+    "trainLabels.csv": "eceab30f4fbf7617694fa195e5ef923a1e7e656740908c492a80ac763f137a00",
+    "cifar-10-python.tar.gz": "6d958be074577803d12ecdefd02955f39262c83c16fe9348329d7fe0b5c001ce"
+  },
+  "git_commit": "26e2492cc792aa059fe1da8aa21b1a2ff56305fe-dirty",
+  "config_hash": "f3417485e61cab14",
+  "config": {
+    "root": "data/cifar10",
+    "split_seed": 0,
+    "train_fraction": 0.8,
+    "fractions": [
+      0.6,
+      0.2,
+      0.2
+    ],
+    "label_check_n": 5000
+  },
+  "seed": 0,
+  "device": "cpu",
+  "versions": {
+    "python": "3.11.16",
+    "torch": "2.14.0",
+    "numpy": "2.4.6",
+    "sklearn": "1.7.2"
+  },
+  "timestamp": "2026-09-20T15:16:38+0600"
+}

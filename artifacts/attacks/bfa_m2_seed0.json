@@ -1,0 +1,58 @@
+{
+  "model": "m2",
+  "precision": "int8",
+  "attacker": "L1",
+  "trials": 5,
+  "n_flip": [
+    6,
+    8,
+    13,
+    7,
+    5
+  ],
+  "reference": {
+    "target_accuracy": 11.0,
+    "n_flip_trials": [
+      7,
+      10,
+      10,
+      12,
+      17
+    ],
+    "baseline_accuracy": 92.11,
+    "quantised_accuracy": 92.28,
+    "source": "Rakin, He, Fan (2019), \"Bit-Flip Attack: Crushing Neural Network with Progressive Bit Search\", ICCV 2019, Table 2 (CIFAR-10, ResNet-20, Nq = 8, 5 trials). https://arxiv.org/abs/1903.12269"
+  },
+  "git_commit": "26e2492cc792aa059fe1da8aa21b1a2ff56305fe-dirty",
+  "config_hash": "dda58c74f8544da1",
+  "config": {
+    "attack_batch": 128,
+    "candidates_per_layer": 10,
+    "max_flips": 40,
+    "eval_n": 2000,
+    "trials": 5,
+    "calib_n": 512,
+    "reference": {
+      "target_accuracy": 11.0,
+      "n_flip_trials": [
+        7,
+        10,
+        10,
+        12,
+        17
+      ],
+      "baseline_accuracy": 92.11,
+      "quantised_accuracy": 92.28,
+      "source": "Rakin, He, Fan (2019), \"Bit-Flip Attack: Crushing Neural Network with Progressive Bit Search\", ICCV 2019, Table 2 (CIFAR-10, ResNet-20, Nq = 8, 5 trials). https://arxiv.org/abs/1903.12269"
+    }
+  },
+  "seed": 0,
+  "device": "cpu",
+  "versions": {
+    "python": "3.11.16",
+    "torch": "2.14.0",
+    "numpy": "2.4.6",
+    "sklearn": "1.7.2"
+  },
+  "timestamp": "2026-09-20T16:09:45+0600"
+}

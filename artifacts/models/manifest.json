@@ -1,0 +1,101 @@
+{
+  "models": {
+    "m2_seed0": {
+      "model": "m2",
+      "name": "ResNet-20",
+      "seed": 0,
+      "test_acc_fp32": 90.42,
+      "test_acc_int8": 90.53,
+      "reference": {
+        "accuracy": 91.25,
+        "source": "He, Zhang, Ren, Sun (2016), Deep Residual Learning for Image Recognition, Table 6 (8.75 % error)"
+      },
+      "gate_pass": true,
+      "train_n": 40000,
+      "test_n": 10000,
+      "checkpoint": "artifacts/models/m2_seed0.pt",
+      "sha256": "7bb70fb3da103a819e967bfbca8c3aad47cfe6e91b04ae627f082b48de246eee",
+      "train_seconds": 2001,
+      "train_device": "mps",
+      "git_commit": "26e2492cc792aa059fe1da8aa21b1a2ff56305fe-dirty",
+      "config_hash": "bc2be10116efb35a",
+      "config": {
+        "epochs": 164,
+        "batch_size": 128,
+        "lr": 0.1,
+        "momentum": 0.9,
+        "weight_decay": 0.0001,
+        "schedule": "multistep",
+        "milestones": [
+          82,
+          123
+        ],
+        "reference": {
+          "accuracy": 91.25,
+          "source": "He, Zhang, Ren, Sun (2016), Deep Residual Learning for Image Recognition, Table 6 (8.75 % error)"
+        }
+      },
+      "device": "cpu",
+      "versions": {
+        "python": "3.11.16",
+        "torch": "2.14.0",
+        "numpy": "2.4.6",
+        "sklearn": "1.7.2"
+      },
+      "timestamp": "2026-09-20T15:54:37+0600"
+    },
+    "m1_seed0": {
+      "model": "m1",
+      "name": "ResNet-8",
+      "seed": 0,
+      "test_acc_fp32": 82.1,
+      "test_acc_int8": 82.45,
+      "reference": {},
+      "gate_pass": null,
+      "train_n": 8000,
+      "test_n": 2000,
+      "checkpoint": "artifacts/models/m1_seed0.pt",
+      "sha256": "50a65478bfd79a15ab2c0da8110343c8581462b2490bdeca6dc27ca693fb7bad",
+      "train_seconds": 30,
+      "train_device": "mps",
+      "git_commit": "26e2492cc792aa059fe1da8aa21b1a2ff56305fe-dirty",
+      "config_hash": "9d0f059173614ff5",
+      "config": {
+        "classes": [
+          3,
+          5
+        ],
+        "epochs": 30,
+        "batch_size": 128,
+        "lr": 0.1,
+        "momentum": 0.9,
+        "weight_decay": 0.0001,
+        "schedule": "cosine",
+        "reference": null
+      },
+      "device": "cpu",
+      "versions": {
+        "python": "3.11.16",
+        "torch": "2.14.0",
+        "numpy": "2.4.6",
+        "sklearn": "1.7.2"
+      },
+      "timestamp": "2026-09-20T16:19:02+0600"
+    }
+  },
+  "data": {
+    "sha256": {
+      "train.7z": "3e64045659dd860c8357cb7b44a180ad4ff98eb876a4f73386688fd55938457b",
+      "trainLabels.csv": "eceab30f4fbf7617694fa195e5ef923a1e7e656740908c492a80ac763f137a00",
+      "cifar-10-python.tar.gz": "6d958be074577803d12ecdefd02955f39262c83c16fe9348329d7fe0b5c001ce"
+    },
+    "integrity": {
+      "kaggle_vs_canonical_test_collisions": 0,
+      "label_agreement": {
+        "checked": 5000,
+        "matched": 5000,
+        "mismatched": 0
+      }
+    }
+  }
+}

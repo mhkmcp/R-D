@@ -1,0 +1,62 @@
+{
+  "model": "m2",
+  "precision": "fp32",
+  "mode": "bf_w",
+  "attacker": "L0",
+  "tap_set": null,
+  "injections": 4500,
+  "probes": 144000,
+  "labels": {
+    "DEGRADED": 70249,
+    "MASKED": 55606,
+    "CRASH": 16070,
+    "SDC": 2075
+  },
+  "track_s_share": 0.8739930555555555,
+  "bias_numel": {
+    "layer1.0.bn1": 16,
+    "layer1.0.bn2": 16,
+    "layer1.1.bn1": 16,
+    "layer1.1.bn2": 16,
+    "layer1.2.bn1": 16,
+    "layer1.2.bn2": 16,
+    "layer2.0.bn1": 32,
+    "layer2.0.bn2": 32,
+    "layer2.1.bn1": 32,
+    "layer2.1.bn2": 32,
+    "layer2.2.bn1": 32,
+    "layer2.2.bn2": 32,
+    "layer3.0.bn1": 64,
+    "layer3.0.bn2": 64,
+    "layer3.1.bn1": 64,
+    "layer3.1.bn2": 64,
+    "layer3.2.bn1": 64,
+    "layer3.2.bn2": 64,
+    "fc": 10
+  },
+  "git_commit": "26e2492cc792aa059fe1da8aa21b1a2ff56305fe-dirty",
+  "config_hash": "d385a58a8326cacb",
+  "config": {
+    "reps": 100,
+    "budgets": [
+      1,
+      4,
+      16
+    ],
+    "probes_per_injection": 32,
+    "checksum_every": 50,
+    "calib_n": 512,
+    "epsilon": 0.01,
+    "sat_quantile": 0.999,
+    "sat_sample": 512
+  },
+  "seed": 0,
+  "device": "cpu",
+  "versions": {
+    "python": "3.11.16",
+    "torch": "2.14.0",
+    "numpy": "2.4.6",
+    "sklearn": "1.7.2"
+  },
+  "timestamp": "2026-09-20T15:58:58+0600"
+}
