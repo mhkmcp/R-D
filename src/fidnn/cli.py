@@ -77,6 +77,18 @@ def main(argv: list[str] | None = None) -> None:
     fit.add_argument("--report", type=Path, default=Path("docs/M4_sanity.md"))
     fit.add_argument("--report-only", action="store_true")
 
+    ov = sub.add_parser("overhead", help="M-6 overhead study: latency, memory, throughput per K")
+    ov.add_argument("model", choices=["m1", "m2", "m3"])
+    ov.add_argument("--precision", choices=["fp32", "int8"], default="fp32")
+    ov.add_argument("--tap-set", choices=["default", "extended"], default="extended")
+    ov.add_argument("--seed", type=int, default=0)
+    ov.add_argument("--config", type=Path, default=Path("configs/bench/overhead.yaml"))
+    ov.add_argument("--data-config", type=Path, default=Path("configs/data/cifar10.yaml"))
+    ov.add_argument("--data-dir", type=Path, default=Path("artifacts/data"))
+    ov.add_argument("--models-dir", type=Path, default=Path("artifacts/models"))
+    ov.add_argument("--detectors-dir", type=Path, default=Path("artifacts/detectors"))
+    ov.add_argument("--out", type=Path, default=Path("artifacts/overhead"))
+
     ev = sub.add_parser("eval", help="M-5 score detectors against the fault population")
     ev.add_argument("model", choices=["m1", "m2", "m3"])
     ev.add_argument("--precision", choices=["fp32", "int8"], default="fp32")
@@ -94,7 +106,7 @@ def main(argv: list[str] | None = None) -> None:
     rep.add_argument("--out", type=Path, default=Path("docs/M5_results.md"))
 
     attack = sub.add_parser("attack", help="M-1b L1 (BFA) attacker and its validation")
-    attack.add_argument("kind", choices=["bfa"])
+    attack.add_argument("kind", choices=["bfa", "l2"])
     attack.add_argument("--model", default="m2", choices=["m1", "m2", "m3"])
     attack.add_argument("--seed", type=int, default=0)
     attack.add_argument("--trials", type=int, help="override the config (smoke runs only)")
@@ -103,7 +115,11 @@ def main(argv: list[str] | None = None) -> None:
     attack.add_argument("--data-dir", type=Path, default=Path("artifacts/data"))
     attack.add_argument("--models-dir", type=Path, default=Path("artifacts/models"))
     attack.add_argument("--out", type=Path, default=Path("artifacts/attacks"))
-    attack.add_argument("--report", type=Path, default=Path("docs/M1b_bfa.md"))
+    attack.add_argument("--tap-set", choices=["default", "extended"], default="default")
+    attack.add_argument("--precision", choices=["fp32", "int8"], default="int8")
+    attack.add_argument("--features-dir", type=Path, default=Path("artifacts/features"))
+    attack.add_argument("--detectors-dir", type=Path, default=Path("artifacts/detectors"))
+    attack.add_argument("--report", type=Path, help="default: M1b_bfa.md (bfa) or M8_adaptive.md")
     attack.add_argument("--report-only", action="store_true")
 
     for name, milestone in LATER.items():
@@ -137,6 +153,11 @@ def main(argv: list[str] | None = None) -> None:
             detect_run.run(args.model, args.precision, args.tap_set, args.seed, args.config,
                            args.features_dir, args.faults_dir, args.out)
         detect_run.write_report(args.out, args.report, args.model)
+    elif args.cmd == "overhead":
+        from fidnn.bench import overhead
+        overhead.run(args.model, args.precision, args.tap_set, args.seed, args.config,
+                     args.data_config, args.data_dir, args.models_dir, args.detectors_dir,
+                     args.out)
     elif args.cmd == "eval":
         from fidnn.eval import run as eval_run
         eval_run.run(args.model, args.precision, args.tap_set, args.seed, args.config,
@@ -145,12 +166,21 @@ def main(argv: list[str] | None = None) -> None:
     elif args.cmd == "report":
         from fidnn.eval import report as eval_report
         eval_report.write(args.results_dir, args.out)
-    elif args.cmd == "attack":
+    elif args.cmd == "attack" and args.kind == "bfa":
         from fidnn.attack import run as attack_run
         if not args.report_only:
             attack_run.run(args.model, args.seed, args.config, args.data_config, args.data_dir,
                            args.models_dir, args.out, trials=args.trials)
-        attack_run.write_report(args.out, args.report)
+        attack_run.write_report(args.out, args.report or Path("docs/M1b_bfa.md"))
+    elif args.cmd == "attack":
+        from fidnn.attack import l2_run
+        cfg = args.config if args.config != Path("configs/attack/bfa.yaml") \
+            else Path("configs/attack/adaptive.yaml")
+        if not args.report_only:
+            l2_run.run(args.model, args.precision, args.tap_set, args.seed, cfg,
+                       args.data_config, args.data_dir, args.models_dir, args.features_dir,
+                       args.detectors_dir, args.out, trials=args.trials)
+        l2_run.write_report(args.out, args.report or Path("docs/M8_adaptive.md"))
     elif args.cmd == "inject":
         from fidnn.inject import report, run
         if not args.report_only:

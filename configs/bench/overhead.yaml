@@ -1,0 +1,5 @@
+# SPEC §9.4 overhead study (M-6). Absolute ms first; percentages are against the stated baseline.
+devices: [cpu, mps]        # INT8 × MPS does not exist (no quantised MPS kernels, §3)
+batch_sizes: [1, 32]       # batch 1 is the operating point; 32 is context
+k_values: [1, 2, 3, 6, 13] # tap counts for the K sweep → H3's Pareto front
+timing: {warmup: 50, runs: 1000}   # §9.4: median of ≥1000 timed runs, warm-up discarded

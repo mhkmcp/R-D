@@ -11,6 +11,7 @@ skill covers the reporting rules.
 | `stats.py` | Bootstrap CIs, paired-bootstrap differences, the ≥ 5-seed rule |
 | `localisation.py` | H4: Spearman ρ, bucket confusion, propagation depth, pre-add share |
 | `run.py` / `report.py` | `fidnn eval`, `fidnn report` → `docs/M5_results.md` |
+| `ablations.py` | §9.6 items 1–3 and 5–7: K sweep, tap position, block drops, training budget, kernel, transfer |
 
 ## What the guard refuses to build
 
@@ -31,6 +32,17 @@ turns up in a clean split; or the Kaggle/canonical pixel-hash check found collis
   quietly showing a single-run number.
 - **Detection is read with overhead** (C5): the results page links the overhead record rather than
   standing alone.
+
+## Ablations that must not cheat
+
+The §9.6(1) K sweep selects taps by **clean-validation FPR**, never by fault TPR — picking taps on
+fault data would be a C2 violation, so `greedy_tap_selection` takes no fault argument at all. Block
+ablations zero a block rather than removing its columns, so widths stay comparable across rows.
+Transfer (§9.6(7)) truncates both models to their shared tap width and reports that truncation with
+the number, since M2 and M3 expose different tap counts.
+
+CIFAR-10-C (§9.6(8)) is loaded by `fidnn.data.cifar10c` as a **clean-input shift** and is never
+combined with faults; the per-type (15) and per-family (4) breakdowns are mandatory, not optional.
 
 ## Decisions
 
