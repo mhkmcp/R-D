@@ -1,0 +1,12 @@
+# M2 ResNet-20. He et al. 2016 §4.2: lr 0.1, ÷10 at 32k and 48k iterations, stop at 64k
+# (391 iterations/epoch at batch 128 → epochs 82, 123, 164).
+epochs: 164
+batch_size: 128
+lr: 0.1
+momentum: 0.9
+weight_decay: 1.0e-4
+schedule: multistep
+milestones: [82, 123]
+reference:
+  accuracy: 91.25
+  source: "He, Zhang, Ren, Sun (2016), Deep Residual Learning for Image Recognition, Table 6 (8.75 % error)"

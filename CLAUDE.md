@@ -8,9 +8,9 @@ activations with SVDD. `docs/SPEC.md` is the specification; `docs/new_thesis_con
 ```
                       configs/*.yaml ──────────────────────────────┐
                                                                    ▼
- Kaggle train.7z ─┐                                          fidnn.cli
- canonical test ──┼─► data ──► clean_fit / clean_cal /    extract | inject | fit
- CIFAR-10-C ──────┘            clean_test / probe pool    calibrate | eval | report | bench
+ Kaggle train.7z ─┐            train (40k, classifier)      fidnn.cli
+ canonical test ──┼─► data ──► clean_fit / clean_cal /    data | train | extract | inject
+ CIFAR-10-C ──────┘            clean_test / probe pool    fit | calibrate | eval | report | bench
                                     │                              │
                                     ▼                              │
             models (M1 ResNet-8, M2 ResNet-20, M3 VGG-11-BN; FP32 + INT8 PTQ)
@@ -48,6 +48,9 @@ uv sync                                  # install (Python 3.11, torch pinned)
 uv run pytest -q                         # tests
 uv run ruff check src tests              # lint (line length 100)
 uv run python -m fidnn bench m0 --quick  # M-0 smoke run
+uv run python -m fidnn data download     # M-1: Kaggle train.7z + labels, canonical archive
+uv run python -m fidnn data prepare      # M-1: integrity checks, splits, train stats
+uv run python -m fidnn train m2          # M-1: train on MPS, evaluate FP32+INT8 on CPU
 uv run python -m fidnn <cmd> --help
 ```
 
