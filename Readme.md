@@ -10,7 +10,8 @@ VGG-11-BN, in FP32 and INT8) and compares multi-layer monitoring against per-lay
 monitoring, reporting both detection quality and runtime/memory overhead.
 
 > **Status:** early development. The throughput benchmark, data preparation, model training and
-> fault-injection sweeps are available; detection and evaluation commands are not yet implemented.
+> fault-injection sweeps, detection and evaluation are available. No results have been produced
+> yet: that needs the CIFAR-10 data and trained models (see **Data** below).
 
 ## Requirements
 
@@ -40,7 +41,7 @@ uv run fidnn --help
 | `fidnn inject m2 [--precision int8] [--mode bf_w]` | Runs a bit-flip sweep and labels each outcome | ✅ |
 | `fidnn attack bfa --model m2` | Runs the BFA attacker and checks it against published results | ✅ |
 | `fidnn fit m1` | Trains SVDD detectors on clean features and sets alarm thresholds | ✅ |
-| `fidnn eval` / `report` | Evaluates detection and overhead, writes tables and figures | planned |
+| `fidnn eval m2` / `report` | Evaluates detection quality and writes the results tables | ✅ |
 
 Configuration lives in `configs/`. Results are written to `artifacts/` as Parquet files, each with a
 JSON sidecar recording the code version, configuration, seed and device.

@@ -1,0 +1,5 @@
+# SPEC §7–§9 evaluation.
+alphas: [0.05, 0.01, 0.001]   # thresholds calibrated on clean_cal, fixed a priori (§8, C3)
+dev_share: 0.30               # fault_dev share of injection instances; the rest is fault_test
+resamples: 2000               # paired bootstrap resamples (§9.5)
+confidence: 0.95

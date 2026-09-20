@@ -1,4 +1,4 @@
-.PHONY: test lint m0 m0-quick m0-report
+.PHONY: test lint m0 m0-quick m0-report reproduce
 
 test:
 	uv run pytest -q
@@ -17,3 +17,8 @@ m0-quick:
 # Re-derive the verdict from existing measurements (e.g. after changing an Assumption).
 m0-report:
 	uv run python -m fidnn bench m0 --report-only
+
+# SPEC §11.3: regenerate the headline tables from cached features and detectors.
+reproduce:
+	uv run python -m fidnn eval m2 --precision int8
+	uv run python -m fidnn report
