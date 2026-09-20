@@ -53,6 +53,19 @@ def main(argv: list[str] | None = None) -> None:
                         help="with --report-only: re-render the M-2 record from existing outcomes")
     inject.add_argument("--report-only", action="store_true")
 
+    attack = sub.add_parser("attack", help="M-1b L1 (BFA) attacker and its validation")
+    attack.add_argument("kind", choices=["bfa"])
+    attack.add_argument("--model", default="m2", choices=["m1", "m2", "m3"])
+    attack.add_argument("--seed", type=int, default=0)
+    attack.add_argument("--trials", type=int, help="override the config (smoke runs only)")
+    attack.add_argument("--config", type=Path, default=Path("configs/attack/bfa.yaml"))
+    attack.add_argument("--data-config", type=Path, default=Path("configs/data/cifar10.yaml"))
+    attack.add_argument("--data-dir", type=Path, default=Path("artifacts/data"))
+    attack.add_argument("--models-dir", type=Path, default=Path("artifacts/models"))
+    attack.add_argument("--out", type=Path, default=Path("artifacts/attacks"))
+    attack.add_argument("--report", type=Path, default=Path("docs/M1b_bfa.md"))
+    attack.add_argument("--report-only", action="store_true")
+
     for name, milestone in LATER.items():
         sub.add_parser(name, help=f"not implemented until {milestone}")
 
@@ -74,6 +87,12 @@ def main(argv: list[str] | None = None) -> None:
         else:
             record = prepare.prepare(args.config, args.out)
             print(f"prepared: {record['counts']}, integrity {record['integrity']}")
+    elif args.cmd == "attack":
+        from fidnn.attack import run as attack_run
+        if not args.report_only:
+            attack_run.run(args.model, args.seed, args.config, args.data_config, args.data_dir,
+                           args.models_dir, args.out, trials=args.trials)
+        attack_run.write_report(args.out, args.report)
     elif args.cmd == "inject":
         from fidnn.inject import report, run
         if not args.report_only:

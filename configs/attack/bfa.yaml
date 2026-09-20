@@ -1,0 +1,18 @@
+# L1 BFA (Rakin et al. 2019) and the M-1b validation (SPEC §6.4, §12).
+attack_batch: 128          # BFA's CIFAR-10 sample size; the attacker sees only this sample
+candidates_per_layer: 10   # in-layer shortlist evaluated exactly, per progressive-bit-search step
+max_flips: 40              # stop even if the accuracy target is never reached
+eval_n: 2000               # probe-pool images used for the accuracy curve
+trials: 5                  # published N_flip is over 5 trials
+calib_n: 512               # clean_fit images for INT8 PTQ calibration (§3.2)
+
+# The published anchor. N_flip = flips needed to push top-1 below 11 % (CIFAR-10 chance is 10 %).
+reference:
+  target_accuracy: 11.0
+  n_flip_trials: [7, 10, 10, 12, 17]   # ResNet-20, Nq = 8
+  baseline_accuracy: 92.11
+  quantised_accuracy: 92.28
+  source: >-
+    Rakin, He, Fan (2019), "Bit-Flip Attack: Crushing Neural Network with Progressive Bit
+    Search", ICCV 2019, Table 2 (CIFAR-10, ResNet-20, Nq = 8, 5 trials).
+    https://arxiv.org/abs/1903.12269
