@@ -1,25 +1,53 @@
 # fidnn.detect
 
-**Status: empty.** Needed for M-4 (sanity check on M1) and M-5. SPEC §5.3, §6, §8. The
+Normalisation, SVDD detectors, calibration and baselines. SPEC §5.3, §6, §8. The
 `/detector-pipeline` skill has the procedure.
 
-## To build
-
-| Piece | Contract |
+| File | Role |
 |---|---|
-| Normaliser | `(x − median)/(IQR + δ)` from `clean_fit`. Drop features under an IQR floor and persist the drop list |
-| Block E | 3 cross-tap features added at fusion (L2 ratio, entropy ratio, saturation difference vs previous tap) → 29/tap |
-| SVDD | `OneClassSVM(kernel="rbf")`, score = `-decision_function`. Use Nystroem + `SGDOneClassSVM` only if M-0 shows exact fitting is too slow |
-| ν/γ selection | ν ∈ {0.001 … 0.1}, γ ∈ {scale} ∪ {k·γ_median}. Pick the minimum clean-val FPR within the SV-fraction band |
-| D1 / D2 / D3 / D4 | Per-tap / early fusion / late fusion via clean-cal CDFs (max, mean, weighted, one-class) / Deep SVDD (extension) |
-| Calibration | τ_α = (1−α) quantile of `clean_cal`, α ∈ {5, 1, 0.1} %, binomial upper bound at 0.1 %. Windowed m-of-n (1,1), (8,3), (32,8) |
-| Baselines | Output-only (MSP, entropy, margin, energy). IF, LOF(`novelty=True`), KDE, PCA recon, AE recon on D2 features |
-| Persistence | Normaliser + detector + thresholds → `artifacts/detectors/` with sidecar |
+| `features.py` | `CleanFeatures` / `FaultFeatures` containers, Block E fusion, long parquet → (N, K, 29) |
+| `normalise.py` | `(x − median)/(IQR + δ)` from `clean_fit`, with the persisted drop list |
+| `svdd.py` | `OneClassSVM(kernel="rbf")`, γ_median, and the clean-only ν/γ selection |
+| `variants.py` | D1 (per tap), D2 (early fusion), D3 (late fusion + first-alarm tap) |
+| `calibrate.py` | τ_α from `clean_cal`, Clopper-Pearson bound, m-of-n windows |
+| `baselines.py` | Output-only scores and the feature-space baselines (§6.4) |
+| `run.py` | `fidnn fit`, and the `docs/M4_sanity.md` record |
+
+## C2 and C3 are structural, not conventions
+
+`CleanFeatures` and `FaultFeatures` are distinct types, and every fit, selection and calibration
+path takes the clean one. Passing fault features raises `TypeError` — a test, not a review finding.
+Nothing that touches a fault score feeds back into a fit, a hyperparameter or a threshold:
+
+| Step | Input |
+|---|---|
+| Normaliser median/IQR and drop list | `clean_fit` |
+| SVDD fit, baseline fit | `clean_fit` |
+| ν/γ selection (min clean-cal FPR subject to the SV band) | `clean_fit` + `clean_cal` |
+| D3 per-tap CDFs, tap weights, per-tap thresholds | `clean_cal` |
+| τ_α, α ∈ {5 %, 1 %, 0.1 %} | `clean_cal` |
+| FPR measurement | `clean_test` |
+| TPR, AUROC, AUPR | fault splits — scoring only |
+
+## Decisions
+
+- **Selection rule.** SPEC §6.3 says "minimise clean-validation FPR subject to a support-vector
+  stability band". Implemented as: fit on `clean_fit`, set τ at the (1−α) quantile of the
+  `clean_fit` scores, measure FPR on `clean_cal`, keep pairs whose SV fraction lies in
+  `SV_BAND × ν`, and take the lowest FPR (ties broken by |SV fraction − ν|). If no pair holds the
+  band, the closest one is used — visible in the sidecar rather than silently.
+- **Score direction** is uniform: higher means more anomalous, for SVDD and for every baseline, so
+  thresholds and metrics read the same way everywhere.
+- **Block E** compares each tap with the previous tap in registry order; the first tap gets neutral
+  values (ratio 1, difference 0) rather than being dropped.
+- **PCA baseline** is reconstruction error, with the scaling flag off. Turning it on and then
+  measuring Euclidean distance would reintroduce exactly the metric C1 excludes.
+- **D4 (Deep SVDD)** is not built: it is a C0 addition, wanted only if D2/D3 leave headroom (§6.2).
 
 ## Invariants
 
-- **C2:** every fit/select/calibrate function accepts clean splits only. Make fault features a
-  distinct type so passing them is a type error.
-- **C3:** no threshold or hyperparameter is chosen from fault or test data.
-- **C1:** no covariance, inverse covariance, whitening or `EllipticEnvelope`-style estimator.
-- First-alarm tap (H4) = first tap in registry order whose D3 score exceeds its own threshold.
+- No covariance estimator, no inverse covariance, no whitening anywhere in this package (C1). The
+  grep guard in `tests/test_c1_guard.py` is the enforcement; the edit hook blocks the names.
+- M-4 runs on M1 and produces **no thesis number**; the generated record says so on its face.
+- The fitted bundle is persisted with its size in KB, because detector size is an overhead metric
+  reported next to detection quality (C5).

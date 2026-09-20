@@ -8,6 +8,7 @@ import pandas as pd
 import torch
 from torch import nn
 
+from fidnn.detect.baselines import output_only_scores
 from fidnn.inject.bitflip import state_checksum
 from fidnn.inject.engine import injected_flips
 from fidnn.inject.taxonomy import label, logit_shift, track
@@ -72,6 +73,7 @@ def run(model: nn.Module, plan: pd.DataFrame, probes_x: torch.Tensor, probes_y: 
             "probe_index": idx, "y": y, "clean_pred": cl.argmax(1),
             "fault_pred": np.where(np.isfinite(fl).all(1), np.nan_to_num(fl).argmax(1), -1),
             "logit_shift": logit_shift(cl, fl), "label": labels, "track": track(labels),
+            **{f"out_{k}": v for k, v in output_only_scores(np.nan_to_num(fl)).items()},
         }))
         if n % checksum_every == 0 or n == len(groups):
             if state_checksum(model) != clean:

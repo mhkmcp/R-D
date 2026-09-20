@@ -53,6 +53,8 @@ uv run python -m fidnn data prepare      # M-1: integrity checks, splits, train 
 uv run python -m fidnn train m2          # M-1: train on MPS, evaluate FP32+INT8 on CPU
 uv run python -m fidnn inject m2 --mode bf_w  # M-2: injection sweep + taxonomy
 uv run python -m fidnn attack bfa --model m2  # M-1b: BFA validation vs published N_flip
+uv run python -m fidnn extract m2             # M-3: clean per-tap features
+uv run python -m fidnn fit m1                 # M-4: detectors, calibration, sanity gate
 uv run python -m fidnn <cmd> --help
 ```
 

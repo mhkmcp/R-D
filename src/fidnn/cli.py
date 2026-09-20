@@ -3,7 +3,7 @@
 import argparse
 from pathlib import Path
 
-LATER = {"fit": "M-4", "calibrate": "M-4", "eval": "M-5", "report": "M-5"}
+LATER = {"eval": "M-5", "report": "M-5"}
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -65,6 +65,18 @@ def main(argv: list[str] | None = None) -> None:
     extract.add_argument("--models-dir", type=Path, default=Path("artifacts/models"))
     extract.add_argument("--out", type=Path, default=Path("artifacts/features"))
 
+    fit = sub.add_parser("fit", help="M-4 fit detectors, calibrate, sanity-check")
+    fit.add_argument("model", choices=["m1", "m2", "m3"])
+    fit.add_argument("--precision", choices=["fp32", "int8"], default="fp32")
+    fit.add_argument("--tap-set", choices=["default", "extended"], default="default")
+    fit.add_argument("--seed", type=int, default=0)
+    fit.add_argument("--config", type=Path, default=Path("configs/detect/svdd.yaml"))
+    fit.add_argument("--features-dir", type=Path, default=Path("artifacts/features"))
+    fit.add_argument("--faults-dir", type=Path, default=Path("artifacts/faults"))
+    fit.add_argument("--out", type=Path, default=Path("artifacts/detectors"))
+    fit.add_argument("--report", type=Path, default=Path("docs/M4_sanity.md"))
+    fit.add_argument("--report-only", action="store_true")
+
     attack = sub.add_parser("attack", help="M-1b L1 (BFA) attacker and its validation")
     attack.add_argument("kind", choices=["bfa"])
     attack.add_argument("--model", default="m2", choices=["m1", "m2", "m3"])
@@ -103,6 +115,12 @@ def main(argv: list[str] | None = None) -> None:
         from fidnn.taps import extract as extract_mod
         extract_mod.run(args.model, args.precision, args.tap_set, args.seed, args.config,
                         args.data_config, args.data_dir, args.models_dir, args.out)
+    elif args.cmd == "fit":
+        from fidnn.detect import run as detect_run
+        if not args.report_only:
+            detect_run.run(args.model, args.precision, args.tap_set, args.seed, args.config,
+                           args.features_dir, args.faults_dir, args.out)
+        detect_run.write_report(args.out, args.report, args.model)
     elif args.cmd == "attack":
         from fidnn.attack import run as attack_run
         if not args.report_only:

@@ -36,10 +36,10 @@ uv run fidnn --help
 | `fidnn bench m0 [--quick]` | Measures inference, injection and detector cost on this machine | ✅ |
 | `fidnn data download` / `prepare` | Downloads CIFAR-10, checks it, and creates the data splits | ✅ |
 | `fidnn train m1\|m2\|m3` | Trains a classifier and checks its accuracy against the published reference | ✅ |
-| `fidnn extract` | Extracts internal-layer features from clean inferences | planned |
+| `fidnn extract m2 [--tap-set extended]` | Extracts internal-layer features from clean inferences | ✅ |
 | `fidnn inject m2 [--precision int8] [--mode bf_w]` | Runs a bit-flip sweep and labels each outcome | ✅ |
 | `fidnn attack bfa --model m2` | Runs the BFA attacker and checks it against published results | ✅ |
-| `fidnn fit` / `calibrate` | Trains SVDD detectors on clean features and sets alarm thresholds | planned |
+| `fidnn fit m1` | Trains SVDD detectors on clean features and sets alarm thresholds | ✅ |
 | `fidnn eval` / `report` | Evaluates detection and overhead, writes tables and figures | planned |
 
 Configuration lives in `configs/`. Results are written to `artifacts/` as Parquet files, each with a
