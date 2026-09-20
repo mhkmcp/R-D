@@ -21,7 +21,7 @@ SANITY_BAND = (0.3, 3.0)  # SPEC §12 M-4: calibrated FPR within 0.3×–3× nom
 
 def _clean_splits(features_dir: Path, stem: str, tap_ids: list[str]) -> dict[str, CleanFeatures]:
     df = pd.read_parquet(features_dir / f"{stem}_clean.parquet")
-    return {split: from_frame(g, tap_ids, CleanFeatures)
+    return {split: from_frame(g, tap_ids, CleanFeatures)[0]
             for split, g in df.groupby("split")}
 
 
@@ -31,21 +31,25 @@ def _fault_features(features_dir: Path, faults_dir: Path, model_id: str, precisi
     paths = sorted(features_dir.glob(f"{model_id}_{precision}_*_seed{seed}_fault_features.parquet"))
     if not paths:
         return None
+    prefix = f"{model_id}_{precision}_"
+    suffix = f"_seed{seed}_fault_features.parquet"
     feats, outs = [], []
     for p in paths:
-        mode = p.name.split("_")[2]
+        mode = p.name[len(prefix):-len(suffix)]   # modes contain underscores: bf_w, rnd_val, …
         out = pd.read_parquet(faults_dir / f"{model_id}_{precision}_{mode}_seed{seed}"
                                            "_outcomes.parquet")
         feats.append(pd.read_parquet(p).assign(mode=mode))
         outs.append(out.assign(mode=mode))
     f = pd.concat(feats, ignore_index=True)
+    # the grid columns travel with the labels: the splits, the guard and every §9.1 breakdown need them
+    keep = ["label", "track", "bucket", "stratum", "budget", "attacker",
+            *[c for c in outs[0].columns if c.startswith("out_")]]
     labels = (pd.concat(outs, ignore_index=True)
-              .set_index(["mode", "injection_id", "probe_index"])[["label", "track"]])
-    keys = (f[["mode", "injection_id", "probe_index"]].drop_duplicates()
-            .set_index(["mode", "injection_id", "probe_index"]))
-    return (from_frame(f, tap_ids, FaultFeatures,
-                       index_cols=("mode", "injection_id", "probe_index")),
-            labels.loc[keys.index].reset_index())
+              .set_index(["mode", "injection_id", "probe_index"])[keep])
+    # align on the feature matrix's own row index; probe order in the file is not sorted
+    features, index = from_frame(f, tap_ids, FaultFeatures,
+                                 index_cols=("mode", "injection_id", "probe_index"))
+    return features, labels.loc[index].reset_index()
 
 
 def fit_all(clean: dict[str, CleanFeatures], seed: int, alpha: float) -> dict:

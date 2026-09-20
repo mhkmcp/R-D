@@ -9,12 +9,12 @@ import torch
 import yaml
 
 from fidnn.data.loader import Batches
-from fidnn.data.prepare import load_arrays
+from fidnn.data.prepare import load_arrays, model_classes, subset_classes
 from fidnn.inject import plan as planner
 from fidnn.inject import sweep
 from fidnn.inject.targets import targets
 from fidnn.models.checkpoint import load
-from fidnn.models.registry import MODELS
+from fidnn.models.registry import MODELS, config_path
 from fidnn.provenance import sidecar
 from fidnn.taps.extract import saturation_thresholds
 from fidnn.taps.hooks import TapMonitor
@@ -31,7 +31,8 @@ def run(model_id: str, precision: str, mode: str, seed: int, cfg_path: Path, dat
     cfg = yaml.safe_load(cfg_path.read_text())
     reps = reps if reps is not None else cfg["reps"]
     arrays = load_arrays(data_cfg, data_dir)
-    fit_x, fit_y = arrays.of("clean_fit")
+    classes = model_classes(config_path(model_id))
+    fit_x, fit_y = subset_classes(*arrays.of("clean_fit"), classes)
     calib = [x for x, _ in Batches(fit_x[:cfg["calib_n"]], fit_y[:cfg["calib_n"]],
                                    arrays.mean, arrays.std, 64)]
 
@@ -39,8 +40,8 @@ def run(model_id: str, precision: str, mode: str, seed: int, cfg_path: Path, dat
     clean_model = load(model_id, seed, precision, models_dir, calib)
     fault_model = load(model_id, seed, precision, models_dir, calib)
 
-    probes_x = _normalised(arrays.probe_x, arrays.probe_y, arrays.mean, arrays.std)
-    probes_y = arrays.probe_y
+    probe_x, probes_y = subset_classes(arrays.probe_x, arrays.probe_y, classes)
+    probes_x = _normalised(probe_x, probes_y, arrays.mean, arrays.std)
     num_classes = MODELS[model_id].num_classes
     with torch.no_grad():
         clean_logits = torch.cat([clean_model(probes_x[i:i + 500])

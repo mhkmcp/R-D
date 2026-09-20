@@ -2,16 +2,25 @@ import numpy as np
 import torch
 
 from fidnn.data.loader import Batches
+from fidnn.data.prepare import subset_classes
 from fidnn.models.registry import build
-from fidnn.models.train import _subset, accuracy, make_scheduler
+from fidnn.models.train import accuracy, make_scheduler
+
+
+def test_model_classes_reads_the_subset_from_the_config():
+    """M1 is cat-vs-dog; everything downstream must restrict its probes the same way."""
+    from fidnn.data.prepare import model_classes
+    from fidnn.models.registry import config_path
+    assert model_classes(config_path("m1")) == [3, 5]
+    assert model_classes(config_path("m2")) is None
 
 
 def test_subset_remaps_labels():
     x = np.arange(10)[:, None]
     y = np.arange(10)
-    xs, ys = _subset(x, y, [3, 5])
+    xs, ys = subset_classes(x, y, [3, 5])
     assert xs.ravel().tolist() == [3, 5] and ys.tolist() == [0, 1]
-    assert _subset(x, y, None)[1] is y
+    assert subset_classes(x, y, None)[1] is y
 
 
 def test_multistep_schedule_matches_he_et_al():

@@ -10,7 +10,6 @@ import yaml
 from fidnn.detect import calibrate
 from fidnn.detect.run import _clean_splits, _fault_features, _scored
 from fidnn.eval import leakage, localisation, metrics, splits, stats
-from fidnn.inject.plan import STRATA
 from fidnn.inject.targets import BUCKETS
 from fidnn.provenance import sidecar
 from fidnn.taps.registry import taps
@@ -18,10 +17,17 @@ from fidnn.taps.registry import taps
 OUTPUT_ONLY_COLS = ("out_msp", "out_entropy", "out_margin", "out_energy")
 
 
-def _grid_axes(fault: pd.DataFrame, width: int) -> dict[str, set]:
-    return {"bucket": set(BUCKETS) & set(fault.bucket.unique()) or set(BUCKETS),
-            "stratum": set(STRATA[width]) & set(fault.stratum.unique()),
-            "budget": set(fault.budget.unique())}
+def planned_cells(faults_dir: Path, model_id: str, precision: str, seed: int) -> set[tuple]:
+    """Every (bucket, stratum, budget) the planner actually generated, from the replay records.
+
+    The guard must compare `fault_test` against the plan, not against itself: deriving the expected
+    axes from the data under test can never find a missing cell (SPEC §7).
+    """
+    cells: set[tuple] = set()
+    for p in sorted(faults_dir.glob(f"{model_id}_{precision}_*_seed{seed}_records.parquet")):
+        rows = pd.read_parquet(p, columns=["bucket", "stratum", "budget"]).drop_duplicates()
+        cells |= {tuple(r) for r in rows.to_numpy()}
+    return cells
 
 
 def _clean_output_only(features_dir: Path, stem: str) -> pd.DataFrame | None:
@@ -46,8 +52,8 @@ def run(model_id: str, precision: str, tap_set: str, seed: int, cfg_path: Path,
     fault_labels = fault_labels.assign(fault_split=splits.assign(fault_labels, seed=seed),
                                        is_gen=splits.gen_mask(fault_labels))
     data_meta = json.loads((data_dir / "cifar10.json").read_text())
-    width = 8 if precision == "int8" else 32
-    leakage.assert_clean(fault_labels, clean_splits={}, grid_axes=_grid_axes(fault_labels, width),
+    cells = planned_cells(faults_dir, model_id, precision, seed)
+    leakage.assert_clean(fault_labels, clean_splits={}, expected_cells=cells,
                          data_integrity=data_meta["integrity"])
     log(f"{stem}: leakage guard passed, {len(fault_labels):,} fault probes")
 

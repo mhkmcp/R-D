@@ -10,9 +10,10 @@ import yaml
 from torch import nn
 
 from fidnn.data.loader import Batches
-from fidnn.data.prepare import load_arrays
+from fidnn.data.prepare import load_arrays, model_classes, subset_classes
 from fidnn.detect.baselines import output_only_scores
 from fidnn.models.checkpoint import load
+from fidnn.models.registry import config_path
 from fidnn.provenance import sidecar
 from fidnn.taps.features import FEATURE_NAMES
 from fidnn.taps.hooks import TapMonitor
@@ -63,7 +64,8 @@ def run(model_id: str, precision: str, tap_set: str, seed: int, cfg_path: Path, 
         data_dir: Path, models_dir: Path, out_dir: Path, log=print) -> dict:
     cfg = yaml.safe_load(cfg_path.read_text())
     arrays = load_arrays(data_cfg, data_dir)
-    fit_x, fit_y = arrays.of("clean_fit")
+    classes = model_classes(config_path(model_id))
+    fit_x, fit_y = subset_classes(*arrays.of("clean_fit"), classes)
     calib = [x for x, _ in Batches(fit_x[:cfg["calib_n"]], fit_y[:cfg["calib_n"]],
                                    arrays.mean, arrays.std, 64)]
     model = load(model_id, seed, precision, models_dir, calib)
@@ -79,7 +81,7 @@ def run(model_id: str, precision: str, tap_set: str, seed: int, cfg_path: Path, 
 
     frames, outputs = [], []
     for split in CLEAN_SPLITS:
-        x, y = arrays.of(split)
+        x, y = subset_classes(*arrays.of(split), classes)
         xb = tensor(x, y)
         df = features(model, tap_list, xb, sat, cfg["batch"])
         df.insert(0, "split", split)

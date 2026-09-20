@@ -9,7 +9,7 @@ class LeakageError(RuntimeError):
     """A results build that would report a leaked number fails here instead."""
 
 
-def check(fault: pd.DataFrame, clean_splits: dict, grid_axes: dict[str, set],
+def check(fault: pd.DataFrame, clean_splits: dict, expected_cells: set[tuple] | None,
           data_integrity: dict | None = None) -> list[str]:
     """Return the violations found; `assert_clean` turns them into a failure."""
     problems = []
@@ -25,10 +25,13 @@ def check(fault: pd.DataFrame, clean_splits: dict, grid_axes: dict[str, set],
         problems.append("fault_gen configurations (stratum sign, budget 4) appear in fault_dev")
 
     held = fault[fault.fault_split == "fault_test"]
-    for axis, expected in grid_axes.items():
-        missing = expected - set(held[axis].unique())
+    if expected_cells:
+        # expected cells come from the injection plan, never from the data being checked
+        actual = set(zip(held.bucket, held.stratum, held.budget))
+        missing = expected_cells - actual
         if missing:
-            problems.append(f"fault_test is missing {axis}: {sorted(missing)}")
+            problems.append(f"fault_test is missing {len(missing)} planned grid cells, e.g. "
+                            f"{sorted(map(str, missing))[:3]}")
 
     for name, ids in clean_splits.items():
         overlap = set(ids) & set(fault.get("record_id", pd.Series(dtype=object)))

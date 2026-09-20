@@ -62,6 +62,20 @@ def load_prepared(out_dir: Path) -> tuple[pd.DataFrame, dict]:
             json.loads((out_dir / "cifar10.json").read_text()))
 
 
+def subset_classes(x: np.ndarray, y: np.ndarray, classes: list[int] | None):
+    """Keep only `classes` and remap their labels to 0..n-1 (M1's 2-class subset, SPEC §3)."""
+    if not classes:
+        return x, y
+    keep = np.isin(y, classes)
+    remap = {c: i for i, c in enumerate(classes)}
+    return x[keep], np.vectorize(remap.get)(y[keep]).astype(np.int64)
+
+
+def model_classes(model_cfg: Path) -> list[int] | None:
+    """The class subset a model is trained on, or None for the full 10 classes."""
+    return yaml.safe_load(model_cfg.read_text()).get("classes")
+
+
 @dataclass(frozen=True)
 class Arrays:
     """Prepared images by split, plus the frozen normalisation (SPEC §3.2)."""

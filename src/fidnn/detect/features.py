@@ -57,11 +57,16 @@ def add_block_e(values: np.ndarray, names: list[str]) -> np.ndarray:
 
 def from_frame(df: pd.DataFrame, taps: list[str], kind: type[Features],
                index_cols: tuple[str, ...] = ("index",)) -> Features:
-    """Long extraction output → (N, K, 29), tap order fixed by the registry."""
+    """Long extraction output → (N, K, 29), tap order fixed by the registry.
+
+    Also returns the row index, because `pivot_table` sorts it: anything joining labels or outcomes
+    onto these rows must use this order rather than the order the file happened to be written in.
+    """
     missing = set(taps) - set(df.tap_id.unique())
     if missing:
         raise ValueError(f"features are missing taps {sorted(missing)}")
     wide = df.pivot_table(index=list(index_cols), columns="tap_id", values=FEATURE_NAMES)
     values = np.stack([np.stack([wide[(f, t)].to_numpy() for f in FEATURE_NAMES], axis=-1)
                        for t in taps], axis=1)
-    return kind(add_block_e(values, FEATURE_NAMES), list(taps), FEATURE_NAMES + BLOCK_E)
+    return (kind(add_block_e(values, FEATURE_NAMES), list(taps), FEATURE_NAMES + BLOCK_E),
+            wide.index)

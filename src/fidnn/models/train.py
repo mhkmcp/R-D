@@ -12,12 +12,10 @@ from torch import nn
 
 from fidnn.data import cifar10
 from fidnn.data.loader import Batches
-from fidnn.data.prepare import load_prepared
+from fidnn.data.prepare import load_prepared, subset_classes
 from fidnn.models.quantize import quantize_ptq
 from fidnn.models.registry import MODELS, build
 from fidnn.provenance import sidecar
-
-CONFIG_NAMES = {"m1": "resnet8", "m2": "resnet20", "m3": "vgg11bn"}
 
 
 def _seed_all(seed: int) -> None:
@@ -26,12 +24,6 @@ def _seed_all(seed: int) -> None:
     torch.manual_seed(seed)
 
 
-def _subset(x: np.ndarray, y: np.ndarray, classes: list[int] | None):
-    if not classes:
-        return x, y
-    keep = np.isin(y, classes)
-    remap = {c: i for i, c in enumerate(classes)}
-    return x[keep], np.vectorize(remap.get)(y[keep]).astype(np.int64)
 
 
 def make_scheduler(opt: torch.optim.Optimizer, cfg: dict, steps_per_epoch: int):
@@ -65,9 +57,9 @@ def train(model_id: str, seed: int, device: str, model_cfg: Path, data_cfg: Path
     fit_x, fit_y = kx[split == "clean_fit"], ky[split == "clean_fit"]
     kx, ky = kx[split == "train"], ky[split == "train"]
     classes = cfg.get("classes")
-    kx, ky = _subset(kx, ky, classes)
-    tx, ty = _subset(tx, ty, classes)
-    fit_x, fit_y = _subset(fit_x, fit_y, classes)
+    kx, ky = subset_classes(kx, ky, classes)
+    tx, ty = subset_classes(tx, ty, classes)
+    fit_x, fit_y = subset_classes(fit_x, fit_y, classes)
 
     _seed_all(seed)
     model = build(model_id).to(device)
