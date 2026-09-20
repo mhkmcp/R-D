@@ -1,4 +1,4 @@
-"""Render the M-0 exit record, docs/M0_throughput.md, from artifacts/m0/*.parquet."""
+"""Render docs/M0_throughput.md from artifacts/m0/*.parquet."""
 
 import json
 from dataclasses import asdict, fields
@@ -146,11 +146,19 @@ def write(art: Path, out: Path, budget_hours: float = 250.0) -> None:
 
     ok = inf[inf.status == "ok"]
     m2_cpu = ok[(ok.model == "m2") & (ok.device == "cpu") & (ok.batch == 32)]
-    m2_off = m2_cpu[(m2_cpu.precision == "fp32") & (m2_cpu.hooks == "off")].samples_per_s.iloc[0]
     m2_feat_int8 = m2_cpu[(m2_cpu.precision == "int8") & (m2_cpu.hooks == "features")
                           & (m2_cpu.tap_set == "default")]
     m2_off_int8 = m2_cpu[(m2_cpu.precision == "int8") & (m2_cpu.hooks == "off")].median_ms.iloc[0]
     int8_feat_ratio = m2_feat_int8.median_ms.iloc[0] / m2_off_int8
+
+    sweep = base[base.line == "Fault sweep (§4.2)"]
+    sweep_min_per_arm_seed = sweep.hours.max() * 60 / Plan().seeds
+    by_line = base.groupby("line").hours_with_slack.sum().sort_values(ascending=False)
+    top_lines = " and ".join(f"{n} ({h:.0f} h)" for n, h in by_line.head(2).items())
+    sweep_rank = list(by_line.index).index("Fault sweep (§4.2)") + 1
+    exact = svdd[(svdd.method == "ocsvm_exact") & (svdd.data == "heavy")]
+    worst_fit = exact[exact.n == exact.n.max()].fit_s.max()
+    worst_fit_at = exact.loc[exact[exact.n == exact.n.max()].fit_s.idxmax()]
 
     sens = []
     for b in (100.0, 250.0, 500.0):
@@ -285,11 +293,11 @@ fused vector.
 
 ## 6. Findings
 
-1. **The §4.2 fault grid is not the budget risk it was feared to be.** On M2 the full
-   {_injections_str(a)}-injection grid per arm/seed is a few CPU-minutes. The §4.2 caveat was
-   written against unmeasured cost; the measured dominant lines are L1 attack generation and model
-   training (§5 above). The cut order in §4.2/§13 is therefore not exercised at a
-   {budget_hours:.0f} h budget.
+1. **The §4.2 fault grid is not where the budget goes.** The full {_injections_str(a)}-injection
+   grid costs at most **{sweep_min_per_arm_seed:.0f} CPU-minutes per arm per seed** (slowest arm,
+   before slack), and ranks #{sweep_rank} of {len(by_line)} baseline lines. The largest are
+   {top_lines} — both driven by volumes in §7 below that SPEC does not pin, so those assumptions
+   deserve more scrutiny than the grid does.
 2. **Feature extraction, not the forward pass, dominates monitored inference — especially in
    INT8.** M2 INT8 with the default 6 taps runs at {int8_feat_ratio:.1f}× the bare INT8 forward
    time (§1). The INT8 forward is fast, so the FP32 descriptor arithmetic (dequantise + quantiles +
@@ -298,10 +306,10 @@ fused vector.
    quantiles) are the levers. It does not affect the budget verdict.
 3. **INT8 × MPS is structurally absent**, as SPEC §3 anticipated. The overhead study's INT8 rows are
    CPU-only by necessity.
-4. **Exact OCSVM is affordable at `clean_fit` scale.** See §4: fits at n = 30k stay in seconds even
-   at d = 377 and ν = 0.1, so the Nystroem path of §6.1 is not needed for cost; the approximation-gap
-   measurement it would require can be dropped unless real features behave very differently from
-   the pessimistic synthetic ones. Re-check at M-4 on real features.
+4. **Exact OCSVM cost at `clean_fit` scale.** The slowest measured fit at n = {int(exact.n.max()):,}
+   is **{worst_fit:.1f} s** (d = {int(worst_fit_at.d)}, ν = {worst_fit_at.nu}) on the pessimistic
+   synthetic features (§4). {"That is cheap enough that the §6.1 Nystroem path is not needed for cost, and its approximation-gap measurement becomes optional." if worst_fit < 120 else "That is expensive enough that the §6.1 Nystroem path should be planned, with its approximation gap measured on M2."}
+   Real features may converge differently; re-check at M-4.
 5. **qnnpack stores INT8-model biases in FP32.** `bf_b` on the INT8 arm therefore flips FP32 bias
    bits, not int8 ones. The INT8 `bf_b` results must say so; otherwise the INT8-vs-FP32 comparison
    for biases compares identical fault mechanics under two labels.
@@ -311,12 +319,10 @@ fused vector.
 7. **Memory figures are partial.** `tracemalloc` (named in §9.4) sees only Python-heap allocations,
    not torch's C++ allocator, so the CPU memory column understates tensor memory; MPS allocation
    is read from `torch.mps.current_allocated_memory()`. M-6 should add process RSS for CPU.
-8. **SPEC question raised by M-0, not resolved here (§3.2 / §7).** `clean_fit`/`clean_cal`/
-   `clean_test` are carved from the 50,000 training images, while fault probes come from the
-   canonical test set. If M-1 trains the classifiers on those same 50,000 images, the detector is
-   fitted on activations of *seen* images and evaluated on *unseen* ones — an input-distribution
-   difference §7 says must not exist. Decide at M-1 whether the classifier trains on a disjoint
-   subset, or whether clean records are drawn from the probe pool.
+8. **Seen-vs-unseen split question, raised by M-0, resolved in SPEC §3.2.** The classifier trains
+   on a 40,000-image `train` split; `clean_fit`/`clean_cal`/`clean_test` (6k/2k/2k) come from the
+   other 10,000, so no detector record is an image the classifier saw. The costs are priced above:
+   training at {a.train_images:,} images, SVDD fits at n = {a.svdd_n:,}.
 
 ## 7. Workload assumptions (not pinned by SPEC)
 

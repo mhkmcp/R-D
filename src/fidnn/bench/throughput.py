@@ -1,13 +1,4 @@
-"""M-0 measurement harness (SPEC §12, protocol §9.4).
-
-Measures, on synthetic 32×32×3 inputs and randomly initialised models:
-  * inference latency/throughput for every (model, device, precision, batch, hooks, tap set);
-  * forward+backward and training-step cost (sizes M-1 training and the L1 BFA search);
-  * per-injection fixed costs: FP32 flip+restore, INT8 unpack/repack, state checksum;
-  * SVDD (ν-OCSVM, RBF) fit and scoring cost against training-set size and feature width.
-
-Rows go to artifacts/m0/*.parquet with a provenance sidecar (§11.3).
-"""
+"""M-0 measurement harness (SPEC §12, protocol §9.4). See bench/README.md."""
 
 import hashlib
 import json
@@ -18,17 +9,18 @@ import time
 import tracemalloc
 import warnings
 from collections.abc import Callable
+from functools import partial
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import sklearn
 import torch
-import torch.nn as nn
 import yaml
+from torch import nn
 
 from fidnn.inject.bitflip import flip_bits_, flip_quantized_weight_, state_checksum
-from fidnn.models.quantize import quantize_ptq
+from fidnn.models.quantize import BACKEND, quantize_ptq
 from fidnn.models.registry import MODELS, build
 from fidnn.taps.hooks import TapMonitor
 from fidnn.taps.registry import taps
@@ -73,11 +65,44 @@ def _seed(seed: int) -> None:
     torch.manual_seed(seed)
 
 
+# --------------------------------------------------------------------------- timed bodies
+
+
+def _forward(model: nn.Module, x: torch.Tensor) -> None:
+    with torch.no_grad():
+        model(x)
+
+
+def _fwd_bwd(model: nn.Module, loss_fn: nn.Module, x: torch.Tensor, y: torch.Tensor) -> None:
+    model.zero_grad(set_to_none=True)
+    loss_fn(model(x), y).backward()
+
+
+def _train_step(fwd_bwd: Callable[[], None], opt: torch.optim.Optimizer) -> None:
+    fwd_bwd()
+    opt.step()
+
+
+def _fp32_flip(rng: np.random.Generator, weights: list[torch.Tensor], count: int) -> None:
+    w = weights[rng.integers(len(weights))]
+    idx = rng.integers(w.numel(), size=count).tolist()
+    bits = rng.integers(32, size=count).tolist()
+    flip_bits_(w.data, idx, bits)
+    flip_bits_(w.data, idx[::-1], bits[::-1])
+
+
+def _int8_flip(rng: np.random.Generator, mod: nn.Module, numel: int, count: int) -> None:
+    idx = rng.integers(numel, size=count).tolist()
+    bits = rng.integers(8, size=count).tolist()
+    flip_quantized_weight_(mod, idx, bits)
+    flip_quantized_weight_(mod, idx[::-1], bits[::-1])
+
+
 # --------------------------------------------------------------------------- inference matrix
 
 
 def _variants(model_id: str, cfg: dict, calib: list[torch.Tensor]):
-    """Yield (device, precision, model) — plus None-model rows for combinations that don't exist."""
+    """Yield (device, precision, model); model is None where the arm does not exist (INT8 × MPS)."""
     fp32 = build(model_id).eval()
     int8 = quantize_ptq(fp32, calib)
     for device in cfg["devices"]:
@@ -103,10 +128,7 @@ def measure_inference(cfg: dict, timing: dict, log: Callable[[str], None]) -> pd
                             continue
                         mon = TapMonitor(model, tap_list, hooks) if hooks != "off" else None
 
-                        def fwd():
-                            with torch.no_grad():
-                                model(x)
-
+                        fwd = partial(_forward, model, x)
                         t = time_fn(fwd, device, timing["warmup"], timing["runs"])
                         tracemalloc.start()
                         fwd()
@@ -133,16 +155,8 @@ def measure_grad_steps(cfg: dict, gcfg: dict, timing: dict, log) -> pd.DataFrame
             opt = torch.optim.SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=1e-4)
             x = torch.randn(bs, 3, 32, 32, device=device)
             y = torch.randint(0, MODELS[model_id].num_classes, (bs,), device=device)
-            loss_fn = nn.CrossEntropyLoss()
-
-            def fwd_bwd():
-                model.zero_grad(set_to_none=True)
-                loss_fn(model(x), y).backward()
-
-            def train_step():
-                fwd_bwd()
-                opt.step()
-
+            fwd_bwd = partial(_fwd_bwd, model, nn.CrossEntropyLoss(), x, y)
+            train_step = partial(_train_step, fwd_bwd, opt)
             for kind, fn in (("fwd_bwd", fwd_bwd), ("train_step", train_step)):
                 t = time_fn(fn, device, timing["warmup"], timing["runs"])
                 rows.append({"model": model_id, "device": device, "precision": "fp32",
@@ -165,14 +179,7 @@ def measure_injection(cfg: dict, icfg: dict, log) -> pd.DataFrame:
         # FP32: flip + restore on a random weight tensor, budgets 1 and 16
         weights = [p for n, p in fp32.named_parameters() if n.endswith("weight") and p.dim() > 1]
         for count in (1, 16):
-            def fp32_flip():
-                w = weights[rng.integers(len(weights))]
-                idx = rng.integers(w.numel(), size=count).tolist()
-                bits = rng.integers(32, size=count).tolist()
-                flip_bits_(w.data, idx, bits)
-                flip_bits_(w.data, idx[::-1], bits[::-1])
-
-            t = time_fn(fp32_flip, "cpu", 5, icfg["runs"])
+            t = time_fn(partial(_fp32_flip, rng, weights, count), "cpu", 5, icfg["runs"])
             rows.append({"model": model_id, "precision": "fp32", "kind": "flip_restore",
                          "count": count, "layer": "random", "median_ms": np.median(t) * 1e3})
 
@@ -182,13 +189,8 @@ def measure_injection(cfg: dict, icfg: dict, log) -> pd.DataFrame:
         for name, mod in qmods.items():
             numel = mod.weight().numel()
             for count in (1, 16):
-                def int8_flip():
-                    idx = rng.integers(numel, size=count).tolist()
-                    bits = rng.integers(8, size=count).tolist()
-                    flip_quantized_weight_(mod, idx, bits)
-                    flip_quantized_weight_(mod, idx[::-1], bits[::-1])
-
-                t = time_fn(int8_flip, "cpu", 2, max(10, icfg["runs"] // 10))
+                t = time_fn(partial(_int8_flip, rng, mod, numel, count), "cpu", 2,
+                            max(10, icfg["runs"] // 10))
                 rows.append({"model": model_id, "precision": "int8", "kind": "flip_restore",
                              "count": count, "layer": name, "layer_numel": numel,
                              "median_ms": np.median(t) * 1e3})
@@ -205,9 +207,7 @@ def measure_injection(cfg: dict, icfg: dict, log) -> pd.DataFrame:
 
 
 def _synthetic_features(rng: np.random.Generator, kind: str, n: int, d: int) -> np.ndarray:
-    """Stand-in feature matrices. Real robust-standardised features (§5.3) are heavier-tailed
-    and less isotropic than N(0, I), which makes libsvm converge more slowly — `heavy`
-    (Student-t, df=3, per-feature scales spanning two decades) is the pessimistic case."""
+    """`gaussian` = N(0, I); `heavy` = Student-t(3) with spread scales (pessimistic, see README)."""
     if kind == "gaussian":
         return rng.standard_normal((n, d)).astype(np.float32)
     scales = np.logspace(-1, 1, d)
@@ -224,8 +224,7 @@ def _time_detector(det, x: np.ndarray, x_score: np.ndarray) -> tuple[float, floa
 
 
 def measure_svdd(scfg: dict, ns: list[int], log) -> pd.DataFrame:
-    """ν-OCSVM (RBF) fit/score cost across n, feature width d, ν, and data shape; plus the
-    Nystroem + SGDOneClassSVM path at the largest n (§6.1)."""
+    """Fit/score cost of `OneClassSVM` and the Nystroem + `SGDOneClassSVM` path (SPEC §6.1)."""
     from sklearn.kernel_approximation import Nystroem
     from sklearn.linear_model import SGDOneClassSVM
     from sklearn.pipeline import make_pipeline
@@ -263,7 +262,8 @@ def measure_svdd(scfg: dict, ns: list[int], log) -> pd.DataFrame:
 def _git_commit() -> str:
     try:
         out = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True)
-        dirty = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True)
+        dirty = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True,
+                               check=False)
         return out.stdout.strip() + ("-dirty" if dirty.stdout.strip() else "")
     except (subprocess.CalledProcessError, FileNotFoundError):
         return "unknown"
@@ -271,7 +271,8 @@ def _git_commit() -> str:
 
 def _sysctl(key: str) -> str:
     try:
-        return subprocess.run(["sysctl", "-n", key], capture_output=True, text=True).stdout.strip()
+        return subprocess.run(["sysctl", "-n", key], capture_output=True, text=True,
+                              check=False).stdout.strip()
     except FileNotFoundError:
         return "unknown"
 
@@ -291,7 +292,7 @@ def sidecar(cfg: dict, quick: bool) -> dict:
                     "cpu_count": int(_sysctl("hw.ncpu") or 0),
                     "os": f"macOS {platform.mac_ver()[0]}"},
         "torch_threads": torch.get_num_threads(),
-        "quantized_engine": torch.backends.quantized.engine,
+        "quantized_engine": BACKEND,
         "devices": cfg["devices"],
         "inputs": "synthetic N(0,1) 32x32x3; random-init weights; INT8 calibrated on random inputs",
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S%z"),

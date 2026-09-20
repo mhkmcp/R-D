@@ -5,7 +5,7 @@ import warnings
 from collections.abc import Iterable
 
 import torch
-import torch.nn as nn
+from torch import nn
 from torch.ao.quantization import get_default_qconfig_mapping
 from torch.ao.quantization.quantize_fx import convert_fx, prepare_fx
 

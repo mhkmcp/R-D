@@ -26,7 +26,6 @@ permission), then update the digest.
    includes Block E; 9+4+5+4 = 22 does not. `src/fidnn/taps/features.py` emits 26 (A–D) for both
    variants, zero-padding D-dense's 4 spatial features, with Block E's 3 added at fusion → 29 for both.
    The §9.6(3) "22-feature downgrade" is therefore 22 *informative* features inside a 26/29 width.
-2. SPEC §3.1 repeats the "two fair objections" list verbatim (once as "Two fair objections", once as
-   "Objections to the single-dataset design" with a third added).
-3. SPEC §13 cites "§3.1a objection 3" (no §3.1a exists — it is §3.1) and "`Dataset.md` §2.4" (the
-   near-duplicate note is Dataset.md §5.2).
+
+SPEC keeps data *requirements* only; dataset rationale, objections, alternatives, licensing and
+revision history live in `docs/Dataset.md`.

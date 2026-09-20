@@ -173,21 +173,29 @@ torchvision.datasets.CIFAR10(root="data/cifar10-canonical", train=False, downloa
 
 | [`SPEC.md`](SPEC.md) §7 split | Source | Share |
 |---|---|---|
-| `clean_fit` | Stratified split of the 50,000 Kaggle training images, seeded and persisted | 60 % |
-| `clean_cal` | Same pool, disjoint | 20 % |
-| `clean_test` | Same pool, disjoint | 20 % |
-| Fault probe pool | The **canonical labelled 10,000-image test set** — disjoint from all of the above | — |
+| `train` | Stratified 80 % of the 50,000 Kaggle training images — classifier training only | 40,000 |
+| `clean_fit` | Stratified 60 % of the remaining 10,000 Kaggle images | 6,000 |
+| `clean_cal` | Same 10,000, disjoint | 2,000 |
+| `clean_test` | Same 10,000, disjoint | 2,000 |
+| Fault probe pool | The **canonical labelled 10,000-image test set** — disjoint from all of the above | 10,000 |
 
-Stratification is per class, so all four partitions keep the dataset's native 10 % per-class balance.
-Clean and fault records draw their input samples from the same held-out pool, so detection cannot be
-attributed to input distribution shift.
+Stratification is per class, so every partition keeps the dataset's native 10 % per-class balance.
+All splits are seeded and persisted. No detector record — clean or fault — comes from an image the
+classifier was trained on, so detection cannot be attributed to a seen-versus-unseen activation shift.
+
+*Amended at M-1.* The v2.0 table carved `clean_*` from all 50,000 training images, which are also the
+classifier's training data: the detector would have been fitted on memorised activations and tested
+on unseen ones — the input shift [`SPEC.md`](SPEC.md) §7 forbids. Holding 10,000 images out of
+classifier training fixes that. The costs: the classifier trains on 40k rather than 50k (expected
+ResNet-20 accuracy ≈ 90.5–91 %, still inside the 1-point M-1 gate), and `clean_fit` shrinks from
+30,000 to 6,000, which caps the [`SPEC.md`](SPEC.md) §9.6(5) training-budget ablation at 6k.
 
 ### 5.1 Two integrity checks the assembly depends on
 
 **Source disjointness.** The Kaggle training images are a repackaging of the canonical 50,000-image
 training set, so *in principle* the canonical test set is disjoint from them. [`SPEC.md`](SPEC.md)
 §11.4 asserts this as a **failing test**: zero pixel-hash collisions between the Kaggle training
-images and the canonical test images. A silent overlap would put probe-pool images into `clean_fit`
+images and the canonical test images. A silent overlap would put probe-pool images into `train` or `clean_fit`
 and inflate every detection number through a route invisible in the results — a direct C2 violation.
 If the check fails, the fallback is to use the canonical distribution for both splits and drop the
 Kaggle packaging entirely.
@@ -211,7 +219,7 @@ the headline with the published near-duplicate list removed from the probe pool.
 ## 6. Preprocessing
 
 - **Per-channel mean/std normalisation** with the standard constants (mean ≈ `(0.4914, 0.4822,
-  0.4465)`, std ≈ `(0.2470, 0.2435, 0.2616)`), **fitted on `clean_fit` only** and frozen.
+  0.4465)`, std ≈ `(0.2470, 0.2435, 0.2616)`), **fitted on `train` only** and frozen.
 - **No GCN + ZCA whitening.** Some older CIFAR pipelines apply it; full-covariance whitening followed
   by a Euclidean metric *is* Mahalanobis distance under another name, and is therefore a direct
   **C1** violation ([`SPEC.md`](SPEC.md) §0). Per-channel scaling is diagonal and permitted.
@@ -463,11 +471,11 @@ than against this document** — the figures here are from published description
 - [ ] **Source disjointness** — zero pixel-hash collisions, Kaggle train vs canonical test (§5.1)
 - [ ] **Label agreement** — `trainLabels.csv` agrees with canonical labels on a sampled subset (§5.1)
 - [ ] **No GCN/ZCA anywhere in the input pipeline** (C1) — asserted, not reviewed by eye (§6)
-- [ ] Channel statistics fitted on `clean_fit` only — leakage guard passing
+- [ ] Channel statistics fitted on `train` only — leakage guard passing
 
 **Splits and models**
 
-- [ ] `clean_fit` / `clean_cal` / `clean_test` stratified split seeded and persisted; probe pool disjoint
+- [ ] `train` / `clean_fit` / `clean_cal` / `clean_test` stratified split seeded and persisted; `train` disjoint from every detector split; probe pool disjoint
 - [ ] VGG-11-BN reference accuracy pinned to a specific cited source in `manifest.json` (§7)
 - [ ] Optional one-shot Kaggle leaderboard submission made as an independent M-1 check (§3.2, §7)
 

@@ -1,0 +1,26 @@
+{
+  "budget_hours": 250.0,
+  "mode": "reinvest",
+  "plan": {
+    "seeds": 10,
+    "reps": 100,
+    "extended_taps": true,
+    "l2": "m2_int8",
+    "int8_parity": true,
+    "m3_int8": true
+  },
+  "baseline_hours": 88.73503983326114,
+  "total_hours": 230.26505040885456,
+  "applied": [
+    "More seeds (5 \u2192 10)",
+    "Extended tap sets (13 on M2, 10 on M3)",
+    "L2 adaptive attacker on M2 INT8 only (\u00a710: run there first)",
+    "Full INT8 parity"
+  ],
+  "declined": [
+    [
+      "L2 adaptive attacker on every arm",
+      465.6827411322362
+    ]
+  ]
+}

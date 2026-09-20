@@ -1,6 +1,6 @@
-import torch.nn as nn
+from torch import nn
 
 
-def Tap() -> nn.Identity:  # noqa: N802 — used like a module class at construction sites
+def Tap() -> nn.Identity:
     """Tap point for the monitor. See `nn.Identity`; must not be subclassed (models/README.md)."""
     return nn.Identity()

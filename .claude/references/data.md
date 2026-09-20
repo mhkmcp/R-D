@@ -7,7 +7,7 @@ Reinstating either is a pure C0 addition. No torchaudio, no tabular pipeline.
 
 | Role | Source |
 |---|---|
-| Training data (→ `clean_fit`/`clean_cal`/`clean_test`) | Kaggle `train.7z` (50,000 PNG, `1.png`…`50000.png`) + `trainLabels.csv` |
+| Training data (→ `train` + `clean_fit`/`clean_cal`/`clean_test`) | Kaggle `train.7z` (50,000 PNG, `1.png`…`50000.png`) + `trainLabels.csv` |
 | Labelled held-out probe pool | Canonical `torchvision.datasets.CIFAR10(train=False)` — 10,000 labelled images |
 | Kaggle `test.7z` | **Never downloaded.** 300,000 images, 290,000 are dummies, no labels. Useless for the §4.3 taxonomy |
 | Confounder set | CIFAR-10-C, Zenodo `10.5281/zenodo.2535967`, CC BY 4.0 — 15 types × 5 severities |
@@ -28,13 +28,15 @@ independent accuracy check; it produces no thesis number.
 
 Stratified per class (10 % each), seeded, **persisted**:
 
-- `clean_fit` 60 % / `clean_cal` 20 % / `clean_test` 20 % — of the 50,000 Kaggle training images
-- Fault probe pool — canonical 10,000 test images, disjoint from all three
+- `train` 40,000 (80 % of Kaggle 50k) — **classifier training only**, never a detector record
+- `clean_fit` 6,000 / `clean_cal` 2,000 / `clean_test` 2,000 — 60/20/20 of the other 10,000 Kaggle
+  images, which the classifier never sees (amended at M-1: detector records must all be unseen)
+- Fault probe pool — canonical 10,000 test images, disjoint from all four
 
 ## Preprocessing
 
 - Per-channel mean/std normalisation (≈ mean `(0.4914, 0.4822, 0.4465)`, std `(0.2470, 0.2435,
-  0.2616)`), **fitted on `clean_fit` only**, frozen.
+  0.2616)`), **fitted on `train` only**, frozen.
 - **No GCN / ZCA whitening** — C1 violation. Assert it in a test.
 - Augmentation (random crop 32 with pad 4, horizontal flip) is **training only**. Detector feature
   extraction uses unaugmented images.
@@ -46,7 +48,7 @@ Stratified per class (10 % each), seeded, **persisted**:
    fall back to canonical for both and drop the Kaggle packaging.
 2. **Label agreement:** `trainLabels.csv` agrees with canonical training labels on a sampled subset
    (catches mis-ordered 7z extraction).
-3. Channel stats fitted on `clean_fit` only.
+3. Channel stats fitted on `train` only; `train` disjoint from every detector split.
 4. No full-covariance transform anywhere in the input pipeline.
 
 Known limit (not a C2 violation): ~3.3 % of CIFAR-10 test images have a *near*-duplicate in train

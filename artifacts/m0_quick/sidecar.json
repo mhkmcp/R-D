@@ -1,0 +1,28 @@
+{
+  "milestone": "M-0",
+  "quick": true,
+  "git_commit": "095527f37caf1979e2ab3e0fe4f8741599a20d55-dirty",
+  "config_hash": "d4ab4e616ad00a6c",
+  "seed": 0,
+  "versions": {
+    "python": "3.11.16",
+    "torch": "2.14.0",
+    "numpy": "2.4.6",
+    "sklearn": "1.7.2",
+    "pandas": "3.0.6"
+  },
+  "machine": {
+    "chip": "Apple M5",
+    "memory_gb": 16.0,
+    "cpu_count": 10,
+    "os": "macOS 26.6.2"
+  },
+  "torch_threads": 4,
+  "quantized_engine": "qnnpack",
+  "devices": [
+    "cpu",
+    "mps"
+  ],
+  "inputs": "synthetic N(0,1) 32x32x3; random-init weights; INT8 calibrated on random inputs",
+  "timestamp": "2026-09-20T00:56:15+0600"
+}
