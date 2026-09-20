@@ -9,15 +9,13 @@ import pandas as pd
 from fidnn.bench.budget import REINVESTMENTS, Assumptions, Measurements, Plan, ledger, plan_budget
 from fidnn.bench.throughput import INT8_MPS_NOTE
 from fidnn.models.registry import MODELS
+from fidnn.tables import md
 
 ARMS = [("cpu", "fp32"), ("cpu", "int8"), ("mps", "fp32"), ("mps", "int8")]
 
 
 def _md(df: pd.DataFrame) -> str:
-    cols = list(df.columns)
-    lines = ["| " + " | ".join(map(str, cols)) + " |", "|" + "---|" * len(cols)]
-    lines += ["| " + " | ".join(str(v) for v in row) + " |" for row in df.itertuples(index=False)]
-    return "\n".join(lines)
+    return md(df, floatfmt="")
 
 
 def _f(x: float, nd: int = 2) -> str:
