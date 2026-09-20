@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import torch
 import yaml
 
@@ -15,6 +16,9 @@ from fidnn.inject.targets import targets
 from fidnn.models.checkpoint import load
 from fidnn.models.registry import MODELS
 from fidnn.provenance import sidecar
+from fidnn.taps.extract import saturation_thresholds
+from fidnn.taps.hooks import TapMonitor
+from fidnn.taps.registry import taps
 
 
 def _normalised(x: np.ndarray, y: np.ndarray, mean, std, batch: int = 500) -> torch.Tensor:
@@ -23,7 +27,7 @@ def _normalised(x: np.ndarray, y: np.ndarray, mean, std, batch: int = 500) -> to
 
 def run(model_id: str, precision: str, mode: str, seed: int, cfg_path: Path, data_cfg: Path,
         data_dir: Path, models_dir: Path, out_dir: Path, reps: int | None = None,
-        log=print) -> dict:
+        tap_set: str | None = None, features_dir: Path | None = None, log=print) -> dict:
     cfg = yaml.safe_load(cfg_path.read_text())
     reps = reps if reps is not None else cfg["reps"]
     arrays = load_arrays(data_cfg, data_dir)
@@ -50,17 +54,36 @@ def run(model_id: str, precision: str, mode: str, seed: int, cfg_path: Path, dat
     log(f"{model_id} {precision} {mode}: {grid.injection_id.nunique()} injections, "
         f"{len(grid)} flips over {grid.layer.nunique()} layers")
 
-    outcomes = sweep.run(fault_model, grid, probes_x, probes_y, clean_logits, cfg["epsilon"],
-                         num_classes, seed=seed, probes_per_injection=cfg["probes_per_injection"],
-                         checksum_every=cfg["checksum_every"], log=log)
+    monitor, fault_features = None, ([] if tap_set else None)
+    if tap_set:
+        sat = saturation_thresholds(clean_model, taps(model_id, tap_set),
+                                    probes_x[:cfg["sat_sample"]], cfg["sat_quantile"])
+        monitor = TapMonitor(fault_model, taps(model_id, tap_set), mode="features",
+                             sat_thresholds=sat)
+    try:
+        outcomes = sweep.run(fault_model, grid, probes_x, probes_y, clean_logits, cfg["epsilon"],
+                             num_classes, seed=seed,
+                             probes_per_injection=cfg["probes_per_injection"],
+                             checksum_every=cfg["checksum_every"], log=log,
+                             monitor=monitor, features_out=fault_features)
+    finally:
+        if monitor is not None:
+            monitor.remove()
 
     out_dir.mkdir(parents=True, exist_ok=True)
     stem = f"{model_id}_{precision}_{mode}_seed{seed}"
     grid.to_parquet(out_dir / f"{stem}_records.parquet", index=False)
     outcomes.to_parquet(out_dir / f"{stem}_outcomes.parquet", index=False)
     share = sweep.track_s_share(outcomes)
+    if fault_features:
+        target = features_dir or out_dir
+        target.mkdir(parents=True, exist_ok=True)
+        pd.concat(fault_features, ignore_index=True).to_parquet(
+            target / f"{stem}_fault_features.parquet", index=False)
+        log(f"{stem}: fault features written for tap set {tap_set}")
     record = {
         "model": model_id, "precision": precision, "mode": mode, "attacker": "L0",
+        "tap_set": tap_set,
         "injections": int(grid.injection_id.nunique()), "probes": len(outcomes),
         "labels": outcomes.label.value_counts().to_dict(),
         "track_s_share": share,

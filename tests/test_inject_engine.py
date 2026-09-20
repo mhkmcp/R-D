@@ -97,10 +97,13 @@ def test_one_injection_hitting_one_element_twice_still_restores(m2):
 
 
 def test_forward_still_runs_under_injection(m2):
+    torch.manual_seed(0)
     x = torch.randn(2, 3, 32, 32)
+    p = plan(targets(m2, "m2"), "bf_w", seed=0, reps=1)
+    exponent = p[p.stratum == "exp_msb"]          # a stratum whose effect is always visible
+    flips = exponent[exponent.injection_id == exponent.injection_id.iloc[0]].to_dict("records")
     with torch.no_grad():
         before = m2(x)
-        flips = _flips(m2, "m2", "bf_w", reps=1)[-1]
         with injected_flips(m2, flips, "bf_w"):
             during = m2(x)
         after = m2(x)

@@ -1,0 +1,5 @@
+# SPEC §5.2–§5.3 feature extraction.
+batch: 250            # forward batch size for extraction (CPU, unaugmented images)
+calib_n: 512          # clean_fit images for INT8 PTQ calibration (§3.2)
+sat_quantile: 0.999   # Block B saturation level: the clean p99.9 per tap
+sat_sample: 512       # clean_fit images the quantile is fitted on (C2: clean data only)

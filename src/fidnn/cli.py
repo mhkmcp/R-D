@@ -3,9 +3,7 @@
 import argparse
 from pathlib import Path
 
-LATER = {
-    "extract": "M-3", "fit": "M-4", "calibrate": "M-4", "eval": "M-5", "report": "M-5",
-}
+LATER = {"fit": "M-4", "calibrate": "M-4", "eval": "M-5", "report": "M-5"}
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -49,9 +47,23 @@ def main(argv: list[str] | None = None) -> None:
     inject.add_argument("--data-dir", type=Path, default=Path("artifacts/data"))
     inject.add_argument("--models-dir", type=Path, default=Path("artifacts/models"))
     inject.add_argument("--out", type=Path, default=Path("artifacts/faults"))
+    inject.add_argument("--tap-set", choices=["default", "extended"],
+                        help="also record per-probe tap features for the fault side (M-3)")
+    inject.add_argument("--features-dir", type=Path, default=Path("artifacts/features"))
     inject.add_argument("--report", type=Path, default=Path("docs/M2_taxonomy.md"),
                         help="with --report-only: re-render the M-2 record from existing outcomes")
     inject.add_argument("--report-only", action="store_true")
+
+    extract = sub.add_parser("extract", help="M-3 clean per-tap feature extraction")
+    extract.add_argument("model", choices=["m1", "m2", "m3"])
+    extract.add_argument("--precision", choices=["fp32", "int8"], default="fp32")
+    extract.add_argument("--tap-set", choices=["default", "extended"], default="default")
+    extract.add_argument("--seed", type=int, default=0)
+    extract.add_argument("--config", type=Path, default=Path("configs/taps/extract.yaml"))
+    extract.add_argument("--data-config", type=Path, default=Path("configs/data/cifar10.yaml"))
+    extract.add_argument("--data-dir", type=Path, default=Path("artifacts/data"))
+    extract.add_argument("--models-dir", type=Path, default=Path("artifacts/models"))
+    extract.add_argument("--out", type=Path, default=Path("artifacts/features"))
 
     attack = sub.add_parser("attack", help="M-1b L1 (BFA) attacker and its validation")
     attack.add_argument("kind", choices=["bfa"])
@@ -87,6 +99,10 @@ def main(argv: list[str] | None = None) -> None:
         else:
             record = prepare.prepare(args.config, args.out)
             print(f"prepared: {record['counts']}, integrity {record['integrity']}")
+    elif args.cmd == "extract":
+        from fidnn.taps import extract as extract_mod
+        extract_mod.run(args.model, args.precision, args.tap_set, args.seed, args.config,
+                        args.data_config, args.data_dir, args.models_dir, args.out)
     elif args.cmd == "attack":
         from fidnn.attack import run as attack_run
         if not args.report_only:
@@ -97,7 +113,8 @@ def main(argv: list[str] | None = None) -> None:
         from fidnn.inject import report, run
         if not args.report_only:
             run.run(args.model, args.precision, args.mode, args.seed, args.config,
-                    args.data_config, args.data_dir, args.models_dir, args.out, reps=args.reps)
+                    args.data_config, args.data_dir, args.models_dir, args.out, reps=args.reps,
+                    tap_set=args.tap_set, features_dir=args.features_dir)
         report.write(args.out, args.report)
     elif args.cmd == "train":
         from fidnn.models.train import CONFIG_NAMES, train
