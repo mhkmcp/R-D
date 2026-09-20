@@ -11,6 +11,7 @@ from torch import nn
 
 from fidnn.data.loader import Batches
 from fidnn.data.prepare import load_arrays
+from fidnn.detect.baselines import output_only_scores
 from fidnn.models.checkpoint import load
 from fidnn.provenance import sidecar
 from fidnn.taps.features import FEATURE_NAMES
@@ -50,6 +51,14 @@ def features(model: nn.Module, tap_list, x: torch.Tensor, sat: dict[str, float],
     return pd.concat(rows, ignore_index=True)
 
 
+@torch.no_grad()
+def _output_only(model: nn.Module, x: torch.Tensor, batch: int) -> dict[str, np.ndarray]:
+    """§6.4 output-only baseline scores, so H1 has its comparison on the clean side too."""
+    logits = np.concatenate([model(x[i:i + batch]).float().numpy()
+                             for i in range(0, len(x), batch)])
+    return output_only_scores(logits)
+
+
 def run(model_id: str, precision: str, tap_set: str, seed: int, cfg_path: Path, data_cfg: Path,
         data_dir: Path, models_dir: Path, out_dir: Path, log=print) -> dict:
     cfg = yaml.safe_load(cfg_path.read_text())
@@ -68,18 +77,23 @@ def run(model_id: str, precision: str, tap_set: str, seed: int, cfg_path: Path, 
                                 cfg["sat_quantile"])
     log(f"{model_id} {precision} {tap_set}: {len(tap_list)} taps, saturation thresholds fitted")
 
-    frames = []
+    frames, outputs = [], []
     for split in CLEAN_SPLITS:
         x, y = arrays.of(split)
-        df = features(model, tap_list, tensor(x, y), sat, cfg["batch"])
+        xb = tensor(x, y)
+        df = features(model, tap_list, xb, sat, cfg["batch"])
         df.insert(0, "split", split)
         frames.append(df)
+        outputs.append(pd.DataFrame(_output_only(model, xb, cfg["batch"])).assign(
+            split=split, index=np.arange(len(x))))
         log(f"  {split}: {len(x)} samples × {len(tap_list)} taps")
     out = pd.concat(frames, ignore_index=True)
 
     out_dir.mkdir(parents=True, exist_ok=True)
     stem = f"{model_id}_{precision}_{tap_set}_seed{seed}"
     out.to_parquet(out_dir / f"{stem}_clean.parquet", index=False)
+    pd.concat(outputs, ignore_index=True).to_parquet(
+        out_dir / f"{stem}_clean_outputs.parquet", index=False)
     record = {"model": model_id, "precision": precision, "tap_set": tap_set,
               "taps": [t.tap_id for t in tap_list], "feature_names": FEATURE_NAMES,
               "saturation": {"quantile": cfg["sat_quantile"], "fitted_on": "clean_fit",

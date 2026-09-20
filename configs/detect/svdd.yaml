@@ -1,0 +1,5 @@
+# SPEC §6.3 selection and §8 calibration. Clean data only (C2, C3).
+alpha: 0.01              # the nominal FPR ν/γ selection optimises against
+alphas: [0.05, 0.01, 0.001]   # thresholds calibrated on clean_cal, fixed a priori
+iqr_floor: 1.0e-8        # features with less clean spread are dropped, and the list persisted
+pca_components: 16       # PCA reconstruction-error baseline (unwhitened — C1)
