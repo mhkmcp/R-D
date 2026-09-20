@@ -2,6 +2,7 @@
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
 
 from torch import nn
 
@@ -23,6 +24,13 @@ MODELS: dict[str, ModelSpec] = {
     "m2": ModelSpec("m2", "ResNet-20", 10, resnet20, thesis_result=True),
     "m3": ModelSpec("m3", "VGG-11-BN", 10, vgg11_bn, thesis_result=True),
 }
+
+
+CONFIG_NAMES = {"m1": "resnet8", "m2": "resnet20", "m3": "vgg11bn"}
+
+
+def config_path(model_id: str, root: Path = Path("configs/model")) -> Path:
+    return root / f"{CONFIG_NAMES[model_id]}.yaml"
 
 
 def build(model_id: str) -> nn.Module:

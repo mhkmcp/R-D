@@ -189,9 +189,10 @@ def main(argv: list[str] | None = None) -> None:
                     tap_set=args.tap_set, features_dir=args.features_dir)
         report.write(args.out, args.report)
     elif args.cmd == "train":
-        from fidnn.models.train import CONFIG_NAMES, train
+        from fidnn.models.registry import config_path
+        from fidnn.models.train import train
         train(args.model, args.seed, args.device,
-              Path(f"configs/model/{CONFIG_NAMES[args.model]}.yaml"), args.data_config,
+              config_path(args.model), args.data_config,
               args.data_dir, args.out, epochs=args.epochs)
     else:
         parser.error(f"`{args.cmd}` is not implemented until {LATER[args.cmd]}")

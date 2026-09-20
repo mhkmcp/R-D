@@ -59,33 +59,37 @@ def test_split_is_seeded():
     assert a.equals(b) and not a.equals(splits.assign(out, seed=1))
 
 
-def _axes(out):
-    return {"bucket": set(BUCKETS), "stratum": set(STRATA), "budget": {1, 4, 16}}
+def _cells(out):
+    """The planned grid, as the injection records would report it."""
+    return {tuple(r) for r in out[["bucket", "stratum", "budget"]].drop_duplicates().to_numpy()}
 
 
 def test_leakage_guard_passes_a_clean_build():
     out = make_outcomes()
     out["fault_split"] = splits.assign(out, seed=0)
-    assert check(out, {}, _axes(out), {"kaggle_vs_canonical_test_collisions": 0}) == []
+    assert check(out, {}, _cells(out), {"kaggle_vs_canonical_test_collisions": 0}) == []
 
 
 def test_leakage_guard_catches_a_missing_grid_cell():
+    """The cell must be compared against the plan; comparing the data with itself finds nothing."""
     out = make_outcomes()
     out["fault_split"] = splits.assign(out, seed=0)
+    planned = _cells(out)
     trimmed = out[out.stratum != "mant_low"]
-    problems = check(trimmed, {}, _axes(out), None)
-    assert any("missing stratum" in p for p in problems)
+    problems = check(trimmed, {}, planned, None)
+    assert any("missing" in p and "grid cells" in p for p in problems)
+    assert check(trimmed, {}, _cells(trimmed), None) == []   # self-derived axes cannot catch it
 
 
 def test_leakage_guard_catches_gen_configs_in_dev_and_pixel_collisions():
     out = make_outcomes()
     out["fault_split"] = "fault_test"
     out.loc[out.stratum == "sign", "fault_split"] = "fault_dev"   # a gen config in dev
-    problems = check(out, {}, _axes(out), {"kaggle_vs_canonical_test_collisions": 3})
+    problems = check(out, {}, _cells(out), {"kaggle_vs_canonical_test_collisions": 3})
     assert any("fault_gen" in p for p in problems)
     assert any("pixel-hash collisions" in p for p in problems)
     with pytest.raises(LeakageError):
-        assert_clean(out, {}, _axes(out), {"kaggle_vs_canonical_test_collisions": 3})
+        assert_clean(out, {}, _cells(out), {"kaggle_vs_canonical_test_collisions": 3})
 
 
 def test_leakage_guard_catches_an_instance_in_both_splits():
@@ -93,7 +97,7 @@ def test_leakage_guard_catches_an_instance_in_both_splits():
     out["fault_split"] = splits.assign(out, seed=0)
     first = out.injection_id.iloc[0]
     out.loc[out.injection_id == first, "fault_split"] = ["fault_dev", "fault_test"] * 2
-    assert any("both fault_dev and fault_test" in p for p in check(out, {}, _axes(out), None))
+    assert any("both fault_dev and fault_test" in p for p in check(out, {}, _cells(out), None))
 
 
 def test_metrics_separate_the_tracks():
