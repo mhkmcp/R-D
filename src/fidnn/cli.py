@@ -3,7 +3,7 @@
 import argparse
 from pathlib import Path
 
-LATER = {"eval": "M-5", "report": "M-5"}
+LATER: dict[str, str] = {}
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -77,6 +77,22 @@ def main(argv: list[str] | None = None) -> None:
     fit.add_argument("--report", type=Path, default=Path("docs/M4_sanity.md"))
     fit.add_argument("--report-only", action="store_true")
 
+    ev = sub.add_parser("eval", help="M-5 score detectors against the fault population")
+    ev.add_argument("model", choices=["m1", "m2", "m3"])
+    ev.add_argument("--precision", choices=["fp32", "int8"], default="fp32")
+    ev.add_argument("--tap-set", choices=["default", "extended"], default="default")
+    ev.add_argument("--seed", type=int, default=0)
+    ev.add_argument("--config", type=Path, default=Path("configs/eval/results.yaml"))
+    ev.add_argument("--features-dir", type=Path, default=Path("artifacts/features"))
+    ev.add_argument("--faults-dir", type=Path, default=Path("artifacts/faults"))
+    ev.add_argument("--detectors-dir", type=Path, default=Path("artifacts/detectors"))
+    ev.add_argument("--data-dir", type=Path, default=Path("artifacts/data"))
+    ev.add_argument("--out", type=Path, default=Path("artifacts/results"))
+
+    rep = sub.add_parser("report", help="M-5 headline tables from artifacts/results")
+    rep.add_argument("--results-dir", type=Path, default=Path("artifacts/results"))
+    rep.add_argument("--out", type=Path, default=Path("docs/M5_results.md"))
+
     attack = sub.add_parser("attack", help="M-1b L1 (BFA) attacker and its validation")
     attack.add_argument("kind", choices=["bfa"])
     attack.add_argument("--model", default="m2", choices=["m1", "m2", "m3"])
@@ -121,6 +137,14 @@ def main(argv: list[str] | None = None) -> None:
             detect_run.run(args.model, args.precision, args.tap_set, args.seed, args.config,
                            args.features_dir, args.faults_dir, args.out)
         detect_run.write_report(args.out, args.report, args.model)
+    elif args.cmd == "eval":
+        from fidnn.eval import run as eval_run
+        eval_run.run(args.model, args.precision, args.tap_set, args.seed, args.config,
+                     args.features_dir, args.faults_dir, args.detectors_dir, args.data_dir,
+                     args.out)
+    elif args.cmd == "report":
+        from fidnn.eval import report as eval_report
+        eval_report.write(args.results_dir, args.out)
     elif args.cmd == "attack":
         from fidnn.attack import run as attack_run
         if not args.report_only:
