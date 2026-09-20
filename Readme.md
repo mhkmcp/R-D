@@ -38,6 +38,7 @@ uv run fidnn --help
 | `fidnn train m1\|m2\|m3` | Trains a classifier and checks its accuracy against the published reference | ✅ |
 | `fidnn extract` | Extracts internal-layer features from clean inferences | planned |
 | `fidnn inject m2 [--precision int8] [--mode bf_w]` | Runs a bit-flip sweep and labels each outcome | ✅ |
+| `fidnn attack bfa --model m2` | Runs the BFA attacker and checks it against published results | ✅ |
 | `fidnn fit` / `calibrate` | Trains SVDD detectors on clean features and sets alarm thresholds | planned |
 | `fidnn eval` / `report` | Evaluates detection and overhead, writes tables and figures | planned |
 
