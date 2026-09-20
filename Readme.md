@@ -9,8 +9,8 @@ It is the software for a master's thesis. It evaluates CIFAR-10 image classifier
 VGG-11-BN, in FP32 and INT8) and compares multi-layer monitoring against per-layer and output-only
 monitoring, reporting both detection quality and runtime/memory overhead.
 
-> **Status:** early development. The throughput benchmark, data preparation and model training are
-> available; fault injection sweeps, detection and evaluation commands are not yet implemented.
+> **Status:** early development. The throughput benchmark, data preparation, model training and
+> fault-injection sweeps are available; detection and evaluation commands are not yet implemented.
 
 ## Requirements
 
@@ -37,7 +37,7 @@ uv run fidnn --help
 | `fidnn data download` / `prepare` | Downloads CIFAR-10, checks it, and creates the data splits | ✅ |
 | `fidnn train m1\|m2\|m3` | Trains a classifier and checks its accuracy against the published reference | ✅ |
 | `fidnn extract` | Extracts internal-layer features from clean inferences | planned |
-| `fidnn inject` | Runs bit-flip fault-injection sweeps | planned |
+| `fidnn inject m2 [--precision int8] [--mode bf_w]` | Runs a bit-flip sweep and labels each outcome | ✅ |
 | `fidnn fit` / `calibrate` | Trains SVDD detectors on clean features and sets alarm thresholds | planned |
 | `fidnn eval` / `report` | Evaluates detection and overhead, writes tables and figures | planned |
 

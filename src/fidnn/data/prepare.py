@@ -1,6 +1,7 @@
 """`fidnn data prepare`: integrity checks, persisted splits, train channel stats (SPEC §3.2)."""
 
 import json
+from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
@@ -59,3 +60,29 @@ def prepare(config_path: Path, out_dir: Path) -> dict:
 def load_prepared(out_dir: Path) -> tuple[pd.DataFrame, dict]:
     return (pd.read_parquet(out_dir / "cifar10_splits.parquet"),
             json.loads((out_dir / "cifar10.json").read_text()))
+
+
+@dataclass(frozen=True)
+class Arrays:
+    """Prepared images by split, plus the frozen normalisation (SPEC §3.2)."""
+
+    kaggle_x: np.ndarray
+    kaggle_y: np.ndarray
+    split: np.ndarray
+    probe_x: np.ndarray       # canonical test set: the labelled fault probe pool
+    probe_y: np.ndarray
+    mean: list[float]
+    std: list[float]
+
+    def of(self, name: str) -> tuple[np.ndarray, np.ndarray]:
+        keep = self.split == name
+        return self.kaggle_x[keep], self.kaggle_y[keep]
+
+
+def load_arrays(config_path: Path, out_dir: Path) -> Arrays:
+    root = Path(yaml.safe_load(config_path.read_text())["root"])
+    splits, meta = load_prepared(out_dir)
+    kx, ky = cifar10.load_kaggle_train(root)
+    px, py = cifar10.load_canonical(root, train=False)
+    return Arrays(kx, ky, splits.split.to_numpy(), px, py,
+                  meta["normalisation"]["mean"], meta["normalisation"]["std"])

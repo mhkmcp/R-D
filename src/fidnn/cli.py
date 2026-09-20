@@ -4,8 +4,7 @@ import argparse
 from pathlib import Path
 
 LATER = {
-    "extract": "M-3", "inject": "M-2", "fit": "M-4", "calibrate": "M-4",
-    "eval": "M-5", "report": "M-5",
+    "extract": "M-3", "fit": "M-4", "calibrate": "M-4", "eval": "M-5", "report": "M-5",
 }
 
 
@@ -38,6 +37,22 @@ def main(argv: list[str] | None = None) -> None:
     train.add_argument("--data-dir", type=Path, default=Path("artifacts/data"))
     train.add_argument("--out", type=Path, default=Path("artifacts/models"))
 
+    inject = sub.add_parser("inject", help="M-2 fault injection sweep and taxonomy")
+    inject.add_argument("model", choices=["m1", "m2", "m3"])
+    inject.add_argument("--precision", choices=["fp32", "int8"], default="fp32")
+    inject.add_argument("--mode", default="bf_w",
+                        choices=["bf_w", "bf_b", "bf_bn", "sa0", "sa1", "rnd_val"])
+    inject.add_argument("--seed", type=int, default=0)
+    inject.add_argument("--reps", type=int, help="override the config (smoke runs only)")
+    inject.add_argument("--config", type=Path, default=Path("configs/inject/grid.yaml"))
+    inject.add_argument("--data-config", type=Path, default=Path("configs/data/cifar10.yaml"))
+    inject.add_argument("--data-dir", type=Path, default=Path("artifacts/data"))
+    inject.add_argument("--models-dir", type=Path, default=Path("artifacts/models"))
+    inject.add_argument("--out", type=Path, default=Path("artifacts/faults"))
+    inject.add_argument("--report", type=Path, default=Path("docs/M2_taxonomy.md"),
+                        help="with --report-only: re-render the M-2 record from existing outcomes")
+    inject.add_argument("--report-only", action="store_true")
+
     for name, milestone in LATER.items():
         sub.add_parser(name, help=f"not implemented until {milestone}")
 
@@ -59,6 +74,12 @@ def main(argv: list[str] | None = None) -> None:
         else:
             record = prepare.prepare(args.config, args.out)
             print(f"prepared: {record['counts']}, integrity {record['integrity']}")
+    elif args.cmd == "inject":
+        from fidnn.inject import report, run
+        if not args.report_only:
+            run.run(args.model, args.precision, args.mode, args.seed, args.config,
+                    args.data_config, args.data_dir, args.models_dir, args.out, reps=args.reps)
+        report.write(args.out, args.report)
     elif args.cmd == "train":
         from fidnn.models.train import CONFIG_NAMES, train
         train(args.model, args.seed, args.device,

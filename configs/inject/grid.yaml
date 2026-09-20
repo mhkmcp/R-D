@@ -1,0 +1,10 @@
+# SPEC §4.2 injection grid and §4.3 taxonomy settings.
+reps: 100                 # injections per (bucket × stratum × budget) cell
+budgets: [1, 4, 16]       # flips per injection (L0/L1)
+probes_per_injection: 32  # statistical unit is the (injection, probe) pair
+checksum_every: 50        # state_dict checksum cadence during the sweep (§4.4)
+calib_n: 512              # clean_fit images for INT8 PTQ calibration (§3.2)
+
+# §4.3 MASKED vs DEGRADED: L-inf logit shift, in logit units, fixed a priori and recorded in the
+# sidecar. CIFAR logits span ~10, so 0.01 is "measurable" without labelling FP32 rounding noise.
+epsilon: 0.01

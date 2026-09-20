@@ -44,17 +44,40 @@ def flip_quantized_weight_(module: nn.Module, flat_idx: Sequence[int], bits: Seq
     module.set_weight_bias(_requantise(w, ir), module.bias())
 
 
+def flip_quantized_bias_(module: nn.Module, flat_idx: Sequence[int], bits: Sequence[int]) -> None:
+    """Flip FP32 bias bits of a quantised conv/linear module; qnnpack keeps biases in FP32."""
+    b = module.bias().detach().clone()
+    flip_bits_(b, flat_idx, bits)
+    module.set_weight_bias(module.weight(), b)
+
+
+def _digest(h: "hashlib._Hash", name: str, v: object) -> None:
+    """Hash tensor *bytes*, recursing into the tuples quantised Linear keeps its packed params in.
+
+    Hashing `repr()` instead would be both blind (it truncates and rounds) and unstable: repacking
+    a quantised Linear with identical values changes that repr.
+    """
+    if isinstance(v, torch.Tensor):
+        h.update(name.encode())
+        if v.is_quantized:
+            qparams = (v.q_per_channel_scales() if v.qscheme() in
+                       (torch.per_channel_affine, torch.per_channel_symmetric)
+                       else torch.tensor([v.q_scale()]))
+            _digest(h, f"{name}.qparams", qparams.float())
+            v = v.int_repr()
+        h.update(v.detach().cpu().contiguous().view(-1).view(torch.uint8).numpy().tobytes())
+    elif isinstance(v, (tuple, list)):
+        for i, item in enumerate(v):
+            _digest(h, f"{name}.{i}", item)
+    else:
+        h.update(f"{name}={v!r}".encode())
+
+
 def state_checksum(model: nn.Module) -> str:
     """Digest of the full `state_dict()` — parameters **and buffers** (BN running stats, §4.4)."""
     h = hashlib.blake2b(digest_size=16)
     for name, v in model.state_dict().items():
-        if not isinstance(v, torch.Tensor):
-            h.update(f"{name}={v!r}".encode())
-            continue
-        if v.is_quantized:
-            v = v.int_repr()
-        h.update(name.encode())
-        h.update(v.detach().cpu().contiguous().view(-1).view(torch.uint8).numpy().tobytes())
+        _digest(h, name, v)
     return h.hexdigest()
 
 
