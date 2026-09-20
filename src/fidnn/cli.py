@@ -105,7 +105,7 @@ def main(argv: list[str] | None = None) -> None:
     rep.add_argument("--results-dir", type=Path, default=Path("artifacts/results"))
     rep.add_argument("--out", type=Path, default=Path("docs/M5_results.md"))
 
-    attack = sub.add_parser("attack", help="M-1b L1 (BFA) attacker and its validation")
+    attack = sub.add_parser("attack", help="M-1b L1 (BFA) validation, or the M-8 L2 adaptive attack")
     attack.add_argument("kind", choices=["bfa", "l2"])
     attack.add_argument("--model", default="m2", choices=["m1", "m2", "m3"])
     attack.add_argument("--seed", type=int, default=0)
