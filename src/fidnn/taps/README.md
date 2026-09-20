@@ -7,6 +7,7 @@ Where activations are observed, and how they become fixed-width features. SPEC �
 | `registry.py` | Stable tap ID → module path, `default` and `extended` sets per model |
 | `hooks.py` | `TapMonitor`: attaches forward hooks, collects raw outputs or features |
 | `features.py` | `tap_features`: per-sample descriptor, Blocks A–D (26 features) |
+| `extract.py` | `fidnn extract`: saturation thresholds and clean features → `artifacts/features/` |
 
 ## Registry
 
@@ -40,9 +41,25 @@ Blocks A (shape, 9), B (sparsity/saturation, 4), C (energy, 5), D (structure, 8)
   path.
 - `dense=True` switches to D-dense: 4 structure features, 4 spatial slots zero-padded. No v2.0 model
   produces a dense tap. The path is kept for synthetic tests and the §9.6(3) downgrade.
-- `sat_threshold` is the clean p99.9 per tap. It must come from `clean_fit`; the default `inf` is only
-  for timing.
+- `sat_threshold` is the clean p99.9 per tap, fitted by `extract.saturation_thresholds` on a
+  `clean_fit` subsample (`configs/taps/extract.yaml: sat_sample`) — an exact quantile over every
+  clean_fit activation would be ~10^8 values per tap. The default `inf` saturates nothing and is
+  only for timing.
 - **C1:** no covariance-based feature here or downstream.
+
+## Extraction (`extract.py`, M-3)
+
+`fidnn extract m2 --precision int8 --tap-set extended` writes one row per (sample, tap) for
+`clean_fit`/`clean_cal`/`clean_test` to `artifacts/features/{model}_{precision}_{tap_set}_seed{n}_clean.parquet`,
+with a sidecar carrying the tap list, feature names and the fitted thresholds.
+
+Fault-side features come from the same hooks during the M-2 sweep: `fidnn inject m2 --tap-set
+extended` attaches a monitor to the **fault** instance and writes `*_fault_features.parquet`, keyed
+by `(injection_id, probe_index)` so it joins onto the outcome labels.
+
+**Batch size is part of the provenance.** Conv reductions are not associative, so extracting at a
+different batch size moves features by ~1e-4 relative. Determinism holds per batching, and the batch
+size is recorded in the sidecar.
 
 ## Tests owed (SPEC §11.4)
 

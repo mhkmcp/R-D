@@ -8,3 +8,7 @@ calib_n: 512              # clean_fit images for INT8 PTQ calibration (§3.2)
 # §4.3 MASKED vs DEGRADED: L-inf logit shift, in logit units, fixed a priori and recorded in the
 # sidecar. CIFAR logits span ~10, so 0.01 is "measurable" without labelling FP32 rounding noise.
 epsilon: 0.01
+
+# Tap features captured during the sweep with `--tap-set` (SPEC §5.2); same settings as extract.
+sat_quantile: 0.999
+sat_sample: 512

@@ -11,6 +11,19 @@ from torch import nn
 from fidnn.inject.bitflip import state_checksum
 from fidnn.inject.engine import injected_flips
 from fidnn.inject.taxonomy import label, logit_shift, track
+from fidnn.taps.features import FEATURE_NAMES
+from fidnn.taps.hooks import TapMonitor
+
+
+def _tap_frame(monitor: "TapMonitor", injection_id: int, probe_index: np.ndarray) -> pd.DataFrame:
+    frames = []
+    for tap_id, out in monitor.outputs.items():
+        df = pd.DataFrame(out.numpy(), columns=FEATURE_NAMES)
+        df.insert(0, "tap_id", tap_id)
+        df.insert(0, "probe_index", probe_index[:len(df)])
+        df.insert(0, "injection_id", injection_id)
+        frames.append(df)
+    return pd.concat(frames, ignore_index=True)
 
 
 class RestoreError(RuntimeError):
@@ -25,8 +38,14 @@ def _logits(model: nn.Module, x: torch.Tensor) -> np.ndarray:
 def run(model: nn.Module, plan: pd.DataFrame, probes_x: torch.Tensor, probes_y: np.ndarray,
         clean_logits: np.ndarray, epsilon: float, num_classes: int, seed: int = 0,
         probes_per_injection: int = 32, checksum_every: int = 50,
-        log: Callable[[str], None] = print) -> pd.DataFrame:
-    """One row per (injection, probe). `model` is the fault instance, never the clean one."""
+        log: Callable[[str], None] = print,
+        monitor: "TapMonitor | None" = None,
+        features_out: list[pd.DataFrame] | None = None) -> pd.DataFrame:
+    """One row per (injection, probe). `model` is the fault instance, never the clean one.
+
+    With `monitor` attached (M-3 taps), each injection's per-probe tap features are appended to
+    `features_out`, keyed by injection_id — this is how fault-side features are produced (§5, §7).
+    """
     rng = np.random.default_rng(seed)
     clean = state_checksum(model)
     rows, t0 = [], time.time()
@@ -42,6 +61,8 @@ def run(model: nn.Module, plan: pd.DataFrame, probes_x: torch.Tensor, probes_y: 
             except (RuntimeError, ValueError) as exc:  # a fault that breaks the forward is a CRASH
                 fl = np.full_like(cl, np.nan)
                 log(f"injection {injection_id}: forward raised {type(exc).__name__}: {exc}")
+            if monitor is not None and features_out is not None:
+                features_out.append(_tap_frame(monitor, injection_id, idx))
         labels = label(cl, fl, y, epsilon, num_classes)
         first = records[0]
         rows.append(pd.DataFrame({
