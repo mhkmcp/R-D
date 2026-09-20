@@ -1,0 +1,9 @@
+# SPEC §10 L2 adaptive attacker (M-8). Run on M2 INT8 first.
+attack_batch: 128
+candidates_per_layer: 10
+max_flips: 40
+eval_n: 2000
+trials: 5
+calib_n: 512
+alpha: 0.01              # the monitor threshold the attacker must stay under
+target_accuracy: 11.0    # same target as M-1b, so budgets compare with the published table
