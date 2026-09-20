@@ -56,6 +56,8 @@ uv run python -m fidnn attack bfa --model m2  # M-1b: BFA validation vs publishe
 uv run python -m fidnn extract m2             # M-3: clean per-tap features
 uv run python -m fidnn fit m1                 # M-4: detectors, calibration, sanity gate
 make reproduce                                # M-5: eval + headline tables
+uv run python -m fidnn overhead m2            # M-6: latency/memory per K
+uv run python -m fidnn attack l2 --model m2   # M-8: adaptive attacker, with vs without
 uv run python -m fidnn <cmd> --help
 ```
 
