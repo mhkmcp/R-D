@@ -35,7 +35,7 @@
     "trainLabels.csv": "eceab30f4fbf7617694fa195e5ef923a1e7e656740908c492a80ac763f137a00",
     "cifar-10-python.tar.gz": "6d958be074577803d12ecdefd02955f39262c83c16fe9348329d7fe0b5c001ce"
   },
-  "git_commit": "26e2492cc792aa059fe1da8aa21b1a2ff56305fe-dirty",
+  "git_commit": "4cbf76404d121aa0d32c36da19c2d15f3e703554-dirty",
   "config_hash": "f3417485e61cab14",
   "config": {
     "root": "data/cifar10",
@@ -51,10 +51,10 @@
   "seed": 0,
   "device": "cpu",
   "versions": {
-    "python": "3.11.16",
-    "torch": "2.14.0",
+    "python": "3.11.6",
+    "torch": "2.14.0+cpu",
     "numpy": "2.4.6",
     "sklearn": "1.7.2"
   },
-  "timestamp": "2026-09-20T15:16:38+0600"
+  "timestamp": "2026-09-21T14:04:51+0200"
 }

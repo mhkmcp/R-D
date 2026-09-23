@@ -4,8 +4,6 @@ version = "0.1.0"
 description = "Fault injection detection in DNNs using multi-layer internal states and SVDD"
 requires-python = "==3.11.*"
 dependencies = [
-    "torch==2.14.0",
-    "torchvision==0.29.0",
     "numpy>=2.0",
     "pandas>=2.2",
     "pyarrow>=17",
@@ -13,6 +11,7 @@ dependencies = [
     "pyyaml>=6",
     "py7zr>=0.22",
     "kaggle>=1.7",
+    "torch>=2.11.0",
 ]
 
 [project.scripts]
@@ -33,3 +32,12 @@ testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 100
+
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu128" }
