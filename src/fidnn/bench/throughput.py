@@ -8,7 +8,7 @@ Measures, on synthetic 32×32×3 inputs and randomly initialised models:
 
 Rows go to artifacts/m0/*.parquet with a provenance sidecar (§11.3).
 """
-
+import os
 import hashlib
 import json
 import platform
@@ -287,8 +287,13 @@ def sidecar(cfg: dict, quick: bool) -> dict:
                      "numpy": np.__version__, "sklearn": sklearn.__version__,
                      "pandas": pd.__version__},
         "machine": {"chip": _sysctl("machdep.cpu.brand_string"),
-                    "memory_gb": int(_sysctl("hw.memsize") or 0) / 2**30,
-                    "cpu_count": int(_sysctl("hw.ncpu") or 0),
+                    # "memory_gb": int(_sysctl("hw.memsize") or 0) / 2**30,
+                    "memory_gb": (
+                            int(_sysctl("hw.memsize")) / 2**30
+                            if str(_sysctl("hw.memsize")).isdigit()
+                            else 0
+                        ),
+                    "cpu_count": os.cpu_count() or 0,
                     "os": f"macOS {platform.mac_ver()[0]}"},
         "torch_threads": torch.get_num_threads(),
         "quantized_engine": torch.backends.quantized.engine,

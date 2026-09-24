@@ -9,11 +9,25 @@ import torch.nn as nn
 from torch.ao.quantization import get_default_qconfig_mapping
 from torch.ao.quantization.quantize_fx import convert_fx, prepare_fx
 
-BACKEND = "qnnpack"
+SUPPORTED_ENGINES = torch.backends.quantized.supported_engines
 
 
 def quantize_ptq(model: nn.Module, calib_batches: Iterable[torch.Tensor]) -> nn.Module:
     """INT8 copy of `model`. See `prepare_fx` / `convert_fx`; calibrate on `clean_fit` only."""
+    
+    if "x86" in SUPPORTED_ENGINES:
+        BACKEND = "x86"
+    elif "onednn" in SUPPORTED_ENGINES:
+        BACKEND = "onednn"
+    elif "qnnpack" in SUPPORTED_ENGINES:
+        BACKEND = "qnnpack"
+    else:
+        print("ENGINEE: ", SUPPORTED_ENGINES)
+        raise RuntimeError(
+            f"No supported quantization backend found. "
+            f"Available: {SUPPORTED_ENGINES}"
+        )
+    
     torch.backends.quantized.engine = BACKEND
     model = copy.deepcopy(model).cpu().eval()
     batches = list(calib_batches)
