@@ -31,7 +31,7 @@ def main(argv: list[str] | None = None) -> None:
     train = sub.add_parser("train", help="M-1 classifier training and accuracy gate")
     train.add_argument("model", choices=["m1", "m2", "m3"])
     train.add_argument("--seed", type=int, default=0)
-    train.add_argument("--device", default="mps")
+    train.add_argument("--device", default="cpu")
     train.add_argument("--epochs", type=int, help="override the config (smoke runs only)")
     train.add_argument("--data-config", type=Path, default=Path("configs/data/cifar10.yaml"))
     train.add_argument("--data-dir", type=Path, default=Path("artifacts/data"))

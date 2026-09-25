@@ -75,5 +75,5 @@ file. Tracks are never merged: S = MASKED ∪ DEGRADED, H = SDC ∪ CRASH (§4.3
 
 {_md(pd.DataFrame([{k: s[k] for k in ('model', 'precision', 'mode', 'seed', 'injections',
                                       'probes', 'track_s_share')} for s in sides]))}
-""")
+""", encoding="utf-8")
     print(f"[m2] wrote {out}")

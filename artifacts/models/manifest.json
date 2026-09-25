@@ -1,0 +1,57 @@
+{
+  "models": {
+    "m1_seed0": {
+      "model": "m1",
+      "name": "ResNet-8",
+      "seed": 0,
+      "test_acc_fp32": 83.4,
+      "test_acc_int8": 83.35,
+      "reference": {},
+      "gate_pass": null,
+      "train_n": 8000,
+      "test_n": 2000,
+      "checkpoint": "artifacts\\models\\m1_seed0.pt",
+      "sha256": "e68b84c5724f0abe0f2ceb8d678084588a6638f1fe5e9f0d0e3cc3426e7bebff",
+      "train_seconds": 196,
+      "train_device": "cpu",
+      "git_commit": "5ad8f8111265c1293aa71eee5ce6d3c4c65fdd05-dirty",
+      "config_hash": "9d0f059173614ff5",
+      "config": {
+        "classes": [
+          3,
+          5
+        ],
+        "epochs": 30,
+        "batch_size": 128,
+        "lr": 0.1,
+        "momentum": 0.9,
+        "weight_decay": 0.0001,
+        "schedule": "cosine",
+        "reference": null
+      },
+      "device": "cpu",
+      "versions": {
+        "python": "3.11.6",
+        "torch": "2.14.0+cpu",
+        "numpy": "2.4.6",
+        "sklearn": "1.7.2"
+      },
+      "timestamp": "2026-09-24T21:02:48+0200"
+    }
+  },
+  "data": {
+    "sha256": {
+      "train.7z": "3e64045659dd860c8357cb7b44a180ad4ff98eb876a4f73386688fd55938457b",
+      "trainLabels.csv": "eceab30f4fbf7617694fa195e5ef923a1e7e656740908c492a80ac763f137a00",
+      "cifar-10-python.tar.gz": "6d958be074577803d12ecdefd02955f39262c83c16fe9348329d7fe0b5c001ce"
+    },
+    "integrity": {
+      "kaggle_vs_canonical_test_collisions": 0,
+      "label_agreement": {
+        "checked": 5000,
+        "matched": 5000,
+        "mismatched": 0
+      }
+    }
+  }
+}

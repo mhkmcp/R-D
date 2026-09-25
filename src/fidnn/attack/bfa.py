@@ -93,6 +93,11 @@ def attack(int8: nn.Module, fp32: nn.Module, x: torch.Tensor, y: torch.Tensor, b
     for step in range(1, budget + 1):
         twin, convs = surrogate(fp32, int8)
         twin.zero_grad(set_to_none=True)
+        print("x shape:", x.shape)
+        # print("logits shape:", logits.shape)
+        print("y shape:", y.shape)
+        print("y:", y)
+        print("y min/max:", y.min().item(), y.max().item())
         F.cross_entropy(twin(x), y).backward()
         before = _loss(int8, x, y)
 

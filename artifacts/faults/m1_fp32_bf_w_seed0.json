@@ -1,0 +1,47 @@
+{
+  "model": "m1",
+  "precision": "fp32",
+  "mode": "bf_w",
+  "attacker": "L0",
+  "injections": 4500,
+  "probes": 144000,
+  "labels": {
+    "MASKED": 76485,
+    "DEGRADED": 55197,
+    "CRASH": 6840,
+    "SDC": 5478
+  },
+  "track_s_share": 0.9144583333333334,
+  "bias_numel": {
+    "layer1.0.bn1": 16,
+    "layer1.0.bn2": 16,
+    "layer2.0.bn1": 32,
+    "layer2.0.bn2": 32,
+    "layer3.0.bn1": 64,
+    "layer3.0.bn2": 64,
+    "fc": 2
+  },
+  "git_commit": "5ad8f8111265c1293aa71eee5ce6d3c4c65fdd05-dirty",
+  "config_hash": "24fdd79cd0207d00",
+  "config": {
+    "reps": 100,
+    "budgets": [
+      1,
+      4,
+      16
+    ],
+    "probes_per_injection": 32,
+    "checksum_every": 50,
+    "calib_n": 512,
+    "epsilon": 0.01
+  },
+  "seed": 0,
+  "device": "cpu",
+  "versions": {
+    "python": "3.11.6",
+    "torch": "2.14.0+cpu",
+    "numpy": "2.4.6",
+    "sklearn": "1.7.2"
+  },
+  "timestamp": "2026-09-25T04:26:51+0200"
+}
