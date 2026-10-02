@@ -55,7 +55,9 @@ with a sidecar carrying the tap list, feature names and the fitted thresholds.
 
 Fault-side features come from the same hooks during the M-2 sweep: `fidnn inject m2 --tap-set
 extended` attaches a monitor to the **fault** instance and writes `*_fault_features.parquet`, keyed
-by `(injection_id, probe_index)` so it joins onto the outcome labels.
+by `(injection_id, probe_index)` so it joins onto the outcome labels. On INT8 the sweep defaults to
+`--exec suffix`: features come from `fidnn.cache.SuffixRunner` through the same `observe` function
+the monitor uses, with upstream taps read from the clean cache. The parquet output is identical.
 
 **Batch size is part of the provenance.** Conv reductions are not associative, so extracting at a
 different batch size moves features by ~1e-4 relative. Determinism holds per batching, and the batch

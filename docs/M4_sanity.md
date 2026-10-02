@@ -1,6 +1,6 @@
 # M-4 — Detector pipeline sanity check (M1)
 
-**Milestone:** M-4 (SPEC §12) · **Commit:** `26e2492cc792aa059fe1da8aa21b1a2ff56305fe-dirty` · **Generated:** 2026-09-20T16:24:05+0600
+**Milestone:** M-4 (SPEC §12) · **Commit:** `51697ac19d6c171a30cdf2f91ce8adaaf158b8a6-dirty` · **Generated:** 2026-10-02T17:27:28+0600
 
 > **This page produces no thesis number.** M-4 is a pipeline sanity gate on M1, the
 > smoke-test model (SPEC §3). The first reported detector numbers come from M-5 on M2.
