@@ -1,0 +1,75 @@
+{
+  "model": "m2",
+  "precision": "int8",
+  "tap_set": "default",
+  "tau": -0.07893575507773423,
+  "alpha": 0.01,
+  "comparisons": [
+    {
+      "target_accuracy": 11.0,
+      "flips_unmonitored": 6,
+      "flips_monitored": null,
+      "cost_multiplier": null,
+      "monitor_blocked_attack": true,
+      "rejected_candidates": 1082,
+      "trial": 0
+    },
+    {
+      "target_accuracy": 11.0,
+      "flips_unmonitored": 8,
+      "flips_monitored": null,
+      "cost_multiplier": null,
+      "monitor_blocked_attack": true,
+      "rejected_candidates": 1293,
+      "trial": 1
+    },
+    {
+      "target_accuracy": 11.0,
+      "flips_unmonitored": 13,
+      "flips_monitored": null,
+      "cost_multiplier": null,
+      "monitor_blocked_attack": true,
+      "rejected_candidates": 0,
+      "trial": 2
+    },
+    {
+      "target_accuracy": 11.0,
+      "flips_unmonitored": 7,
+      "flips_monitored": null,
+      "cost_multiplier": null,
+      "monitor_blocked_attack": true,
+      "rejected_candidates": 829,
+      "trial": 3
+    },
+    {
+      "target_accuracy": 11.0,
+      "flips_unmonitored": 5,
+      "flips_monitored": null,
+      "cost_multiplier": null,
+      "monitor_blocked_attack": true,
+      "rejected_candidates": 1715,
+      "trial": 4
+    }
+  ],
+  "git_commit": "a9142c22f4594e6cbbf6cfda866a2c5568445cb2-dirty",
+  "config_hash": "b05af59178224079",
+  "config": {
+    "attack_batch": 128,
+    "candidates_per_layer": 10,
+    "max_flips": 40,
+    "eval_n": 2000,
+    "trials": 5,
+    "calib_n": 512,
+    "alpha": 0.01,
+    "target_accuracy": 11.0
+  },
+  "seed": 0,
+  "device": "cpu",
+  "versions": {
+    "python": "3.11.16",
+    "torch": "2.14.0",
+    "numpy": "2.4.6",
+    "sklearn": "1.7.2"
+  },
+  "timestamp": "2026-10-02T17:49:21+0600"
+}
