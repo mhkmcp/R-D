@@ -60,15 +60,20 @@ class DemoSession:
     def __init__(self, model_id: str, clean: nn.Module, fault: nn.Module, probes_x: torch.Tensor,
                  probes_y: np.ndarray, detectors: dict, taus: dict[float, float],
                  tap_list: list[TapInfo], sat: dict[str, float], cache_dir: Path,
-                 classes: tuple[str, ...] = CIFAR10, images: np.ndarray | None = None):
+                 classes: tuple[str, ...] = CIFAR10, images: np.ndarray | None = None,
+                 mean=None, std=None):
         self.model_id, self.clean, self.fault = model_id, clean, fault
         self.x, self.y, self.classes = probes_x, probes_y, classes
         self.images = images  # uint8 NHWC for display, aligned with probes_x
+        self.mean, self.std = mean, std  # train-split normalisation, for uploaded pictures
+        self.n_pool = len(probes_y)       # uploads are appended after the probe pool
         self.detectors, self.taus, self.tap_list = detectors, taus, tap_list
         self.tap_ids = [t.tap_id for t in tap_list]
+        self.sat = sat
         gm = traced(clean)
-        cache = store.ensure(cache_dir, gm, probes_x, Resume(gm).starts(stateful_modules(gm)),
-                             tap_list, sat, log=lambda _: None)
+        self.starts = Resume(gm).starts(stateful_modules(gm))
+        cache = store.ensure(cache_dir, gm, probes_x, self.starts, tap_list, sat,
+                             log=lambda _: None)
         self.runner = SuffixRunner(traced(fault), cache, tap_list, sat)
         self.clean_checksum = state_checksum(fault)
         self.targets: list[Target] = targets(fault, model_id)
@@ -128,11 +133,41 @@ class DemoSession:
         new = flip_bits_(old.clone(), [0], [f["bit"]])
         return {"old": float(old[0]), "new": float(new[0])}
 
+    # --- uploads --------------------------------------------------------------------------
+
+    @torch.no_grad()
+    def add_image(self, img: np.ndarray, label: int | None = None) -> int:
+        """Append a 32×32 RGB uint8 picture; its clean pass extends the cache in memory.
+
+        `label` defaults to the clean model's answer, since an upload has no ground truth.
+        """
+        if img.shape != (32, 32, 3) or img.dtype != np.uint8:
+            raise ValueError("expected a 32×32×3 uint8 picture")
+        if self.mean is None or self.std is None:
+            raise ValueError("session has no normalisation statistics")
+        mean = torch.tensor(self.mean, dtype=torch.float32).view(1, 3, 1, 1)
+        std = torch.tensor(self.std, dtype=torch.float32).view(1, 3, 1, 1)
+        x = (torch.from_numpy(img).permute(2, 0, 1)[None].float().div_(255) - mean) / std
+        row = store.build(traced(self.clean), x, self.starts, self.tap_list, self.sat, batch=1)
+        old = self.runner.cache
+        if row.tap_ids != old.tap_ids or any(row.qparams[k] != v for k, v in old.qparams.items()):
+            raise RuntimeError("upload's clean pass does not match the probe cache")
+        self.runner.cache = store.ProbeCache(
+            {k: np.concatenate([old.cuts[k], row.cuts[k]]) for k in old.cuts}, old.qparams,
+            np.concatenate([old.logits, row.logits]), old.tap_ids,
+            np.concatenate([old.features, row.features]), old.key)
+        self.x = torch.cat([self.x, x])
+        y = int(row.logits[0].argmax()) if label is None else int(label)
+        self.y = np.concatenate([self.y, np.array([y], dtype=self.y.dtype)])
+        if self.images is not None:
+            self.images = np.concatenate([self.images, img[None]])
+        return len(self.y) - 1
+
     # --- evaluation -----------------------------------------------------------------------
 
     def batch_for(self, image: int, seed: int = 0) -> np.ndarray:
         """`image` first, then BATCH − 1 fixed other probes, so CRASH means what it does in §4.3."""
-        rest = np.random.default_rng(seed).permutation(len(self.y))
+        rest = np.random.default_rng(seed).permutation(self.n_pool)
         return np.concatenate([[image], rest[rest != image][:BATCH - 1]])
 
     def _features(self, per_tap: dict[str, torch.Tensor], kind: type[Features]) -> Features:
@@ -230,7 +265,8 @@ class DemoSession:
         return cls(model_id, load(model_id, seed, precision, art / "models", calib),
                    load(model_id, seed, precision, art / "models", calib), x, py[keep],
                    bundle["detectors"], taus, taps(model_id, tap_set), sat,
-                   art / "cache" / f"demo_{stem}", classes, images=px[keep])
+                   art / "cache" / f"demo_{stem}", classes, images=px[keep],
+                   mean=arrays.mean, std=arrays.std)
 
 
 def missing_prerequisites(model_id: str = "m2", precision: str = "int8",

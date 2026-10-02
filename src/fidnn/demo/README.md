@@ -27,6 +27,11 @@ and produces **no thesis number**.
   injection-level property, and on one picture alone every wrong answer would read as a crash.
 - **Tracks S and H are never merged on screen.** The plain-language names are "damage hidden /
   answer unchanged" (S) and "answer wrong or broken" (H).
+- **Uploads.** `add_image` normalises the picture with the train-split statistics, runs it through
+  the clean instance (`cache.store.build`), and appends that row to the in-memory cache. Nothing
+  goes to disk. The upload is judged with the same 31 filler probes from the pool and never
+  becomes filler itself. It has no ground truth: the "true" label is the user's choice, or else the
+  clean model's answer. So SDC on an upload means "answer changed", not "answer now wrong".
 - Non-finite features, from a blown-up forward, score +∞, which is always over threshold. The fit
   pipeline never sees them.
 - The Gradio app holds **one** shared session. It is a local, single-user tool and must not be

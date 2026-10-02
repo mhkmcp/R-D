@@ -42,6 +42,17 @@ def _card(title: str, big: str, body: str, tone: str) -> str:
             f'<div class="big">{html.escape(big)}</div><div>{html.escape(body)}</div></div>')
 
 
+def _to_32(pil) -> np.ndarray:
+    """Centre-crop to a square and shrink to the 32×32 RGB the model reads."""
+    from PIL import Image
+
+    img = pil.convert("RGB")
+    side = min(img.size)
+    left, top = (img.width - side) // 2, (img.height - side) // 2
+    img = img.crop((left, top, left + side, top + side)).resize((32, 32), Image.LANCZOS)
+    return np.array(img, dtype=np.uint8)
+
+
 def _flip_list(session: DemoSession) -> str:
     if not session.flips:
         return "*The model is clean — no bits flipped.*"
@@ -111,12 +122,22 @@ def build_app(session: DemoSession):
         image = gr.State(int(picks[0]))
         with gr.Row(equal_height=False):
             with gr.Column(scale=1, min_width=260):
-                gr.Markdown("### 1 · Pick a picture")
+                with gr.Row(equal_height=True):
+                    gr.Markdown("### 1 · Pick a picture")
+                    upload = gr.UploadButton("Upload image", file_types=["image"], size="sm",
+                                             scale=0, min_width=120)
+                with gr.Row(visible=False) as preview:
+                    original = gr.Image(label="Your upload", interactive=False, height=140)
+                    seen = gr.Image(label="What the model sees (32×32)", interactive=False,
+                                    height=140)
                 gal = gr.Gallery([(_upscale(session.images[i]), session.classes[int(session.y[i])])
                                   for i in picks], columns=4, height="auto",
                                  allow_preview=False, show_label=False)
                 chosen = gr.Markdown()
                 rnd = gr.Button("Random picture")
+                truth = gr.Dropdown(["Don't know"] + list(session.classes), value="Don't know",
+                                    label="Uploaded image shows")
+                upload_err = gr.Markdown()
             with gr.Column(scale=1, min_width=260):
                 gr.Markdown("### 2 · Damage the memory")
                 where = gr.Radio(list(WHERE), value="Late layers", label="Where")
@@ -157,15 +178,35 @@ def build_app(session: DemoSession):
 
         def show(img, a):
             cls = session.classes[int(session.y[img])]
-            return (f"Selected: **{cls}** (picture #{img})", *render(session, img, a))
+            what = (f"Selected: **your upload**, treated as **{cls}**" if img >= session.n_pool
+                    else f"Selected: **{cls}** (picture #{img})")
+            return (what, *render(session, img, a))
 
         def pick(evt: gr.SelectData, a):
             img = int(picks[evt.index])
             return (img, *show(img, a))
 
         def random_pick(a):
-            img = int(np.random.default_rng().integers(len(session.y)))
+            img = int(np.random.default_rng().integers(session.n_pool))
             return (img, *show(img, a))
+
+        def do_upload(path, t, img, a):
+            from PIL import Image, UnidentifiedImageError
+
+            keep = (gr.Row(), gr.Image(), gr.Image())
+            if path is None:
+                return ("", *keep, img, *show(img, a))
+            try:
+                pil = Image.open(path).convert("RGB")
+            except UnidentifiedImageError:
+                return ("⚠️ That file is not an image.", *keep, img, *show(img, a))
+            label = None if t == "Don't know" else session.classes.index(t)
+            small = _to_32(pil)
+            new = session.add_image(small, label)
+            note = ("" if label is not None else
+                    "*No label given: the clean model's answer counts as the true one.*")
+            return (note, gr.Row(visible=True), np.array(pil), _upscale(small, 8), new,
+                    *show(new, a))
 
         def do_flip(img, w, h, n, a):
             session.add_flips(WHERE[w], severity[h], int(n), np.random.default_rng())
@@ -205,6 +246,7 @@ def build_app(session: DemoSession):
         demo.load(show, [image, alpha], shown)
         gal.select(pick, [alpha], [image, *shown])
         rnd.click(random_pick, [alpha], [image, *shown])
+        upload.upload(do_upload, [upload, truth, image, alpha], [upload_err, preview, original, seen, image, *shown])
         flip.click(do_flip, [image, where, how, count, alpha], shown)
         surprise.click(do_surprise, [image, alpha], shown)
         reset.click(do_reset, [image, alpha], shown)

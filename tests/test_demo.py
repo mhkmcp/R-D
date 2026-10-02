@@ -102,3 +102,24 @@ def test_export_is_deterministic(session, tmp_path):
     assert len(a["scenarios"]) == 3 * n_strata * len(export.BUDGETS) * export.DRAWS
     assert json.loads((tmp_path / "a.json").read_text())["model"] == "m2"
     assert session.flips == []
+
+
+def test_uploaded_image_is_exact(session):
+    session.mean, session.std = (0.5, 0.5, 0.5), (0.25, 0.25, 0.25)
+    img = np.random.default_rng(3).integers(0, 256, (32, 32, 3), dtype=np.uint8)
+    i = session.add_image(img)
+    assert i == len(session.y) - 1 and i >= session.n_pool
+    with torch.no_grad():
+        clean = session.clean(session.x[i:i + 1]).float().numpy()
+    assert np.array_equal(clean, session.runner.cache.logits[i:i + 1])
+    assert session.y[i] == clean.argmax()
+    session.reset()
+    session.add_flips("early", "msb", 4, np.random.default_rng(2))
+    idx = session.batch_for(i)
+    assert idx[0] == i and (idx[1:] < session.n_pool).all()
+    ev = session.evaluate(idx)
+    with torch.no_grad(), injected_flips(session.fault, session.flips, "bf_w"):
+        full = session.fault(session.x[idx]).float().numpy()
+    assert np.array_equal(full, ev.fault_logits)
+    assert ev.checksum == session.clean_checksum
+    session.reset()
