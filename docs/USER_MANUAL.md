@@ -87,7 +87,26 @@ fitted detector bundle (default `m2`, `default`, `0`). The live app is INT8 only
 
 The page has three columns.
 
-**Step 1 — Pick a picture.** Click one of 24 CIFAR-10 pictures, or press **Random picture**.
+**Step 1 — Pick a picture.** Click one of 24 CIFAR-10 pictures, or press **Random picture**, or use
+your own picture:
+
+1. Under **Random picture**, set **Uploaded image shows** to what the picture contains (for
+   example *cat*). Leave it on *Don't know* if it shows none of the model's classes.
+2. Press **Upload image**, next to the "1 · Pick a picture" heading, and choose an image file.
+3. A preview appears under the heading. **Your upload** is the original image. **What the model
+   sees (32×32)** is the same image cropped to its centre square and shrunk to the 32×32 pixels the
+   model reads. Every result in steps 2 and 3 is for that small version.
+
+An uploaded picture becomes the selected picture. Flips, the false-alarm setting and the layer chart
+work on it the same way as on a gallery picture. Notes:
+
+- With *Don't know*, the clean model's own answer is treated as the true label. "Wrong answer,
+  silently" then means *the answer changed*, not that it is now wrong.
+- Uploads stay in memory until the app stops. They are never written to disk, and they are never
+  used as one of the 31 other pictures a selection is judged with (see below).
+- A picture that looks nothing like CIFAR-10 (a photo of text, a screenshot, random noise) often
+  raises an alarm on a **clean** model. The monitor flags unusual inputs as well as damaged
+  weights. See [§7](#two-worked-examples) for why that counts as a false alarm.
 
 **Step 2 — Damage the memory.**
 
@@ -369,6 +388,19 @@ is set so that about 1 in 100 clean images is flagged. Across the 500 demo image
 7 were flagged (1.4 %), which is close to the 1 % target. A score that only just crosses τ while no
 single layer looks abnormal is typical of a false alarm.
 
+To make a false alarm yourself in the live app, either:
+
+- press **Reset model**, choose **5 % (sensitive)**, and click through pictures until one shows
+  🔴 *Fault detected* together with *No effect*. About 1 picture in 20 does; or
+- press **Reset model** and upload a picture unlike CIFAR-10. A 300×200 image of random noise,
+  uploaded to the clean model, scored D2 = 0.0276. That is above the threshold at every setting,
+  including the strictest (τ = 0.0143 at 0.1 %). The outcome is *No effect*, so this alarm is false
+  too. It is caused by an unusual input, not by a fault.
+
+The **Try this damage on 200 pictures** button, run on the clean model, gives the false-alarm rate
+directly as "share flagged by detector". Everything in the demo is for illustration only. Reported
+false-alarm rates come from `fidnn eval` ([§4.2](#42-the-pipeline-in-order)).
+
 **Example 2: a true detection.** Four sign bits are flipped in the late layers:
 
 | Layer | Weight | Bit | Value before → after |
@@ -445,6 +477,8 @@ judged on any gallery picture.
 | A gate says FAIL | read the matching `docs/M*_*.md`; do not run later milestones on top of it |
 | Disk filling up | `artifacts/cache/` can be deleted safely and rebuilds when needed |
 | Port 7860 already in use | `uv run fidnn ui --port 7861` |
+| Upload says "That file is not an image" | use a PNG, JPEG or WebP file |
+| Upload button missing after a code update | stop `fidnn ui` and start it again; a running app does not reload code |
 
 ---
 
