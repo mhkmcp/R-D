@@ -45,10 +45,10 @@ editing that package.
 
 ```bash
 uv sync                                  # install (Python 3.11, torch pinned)
+uv run python -m fidnn data download     # M-1: Kaggle train.7z + labels, canonical archive
 uv run pytest -q                         # tests
 uv run ruff check src tests              # lint (line length 100)
 uv run python -m fidnn bench m0 --quick  # M-0 smoke run
-uv run python -m fidnn data download     # M-1: Kaggle train.7z + labels, canonical archive
 uv run python -m fidnn data prepare      # M-1: integrity checks, splits, train stats
 uv run python -m fidnn train m2          # M-1: train on MPS, evaluate FP32+INT8 on CPU
 uv run python -m fidnn inject m2 --mode bf_w  # M-2: injection sweep + taxonomy
