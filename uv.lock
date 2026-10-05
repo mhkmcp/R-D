@@ -323,6 +323,7 @@ name = "fidnn"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "gradio" },
     { name = "kaggle" },
     { name = "numpy" },
     { name = "pandas" },
@@ -346,6 +347,7 @@ ui = [
 
 [package.metadata]
 requires-dist = [
+    { name = "gradio", specifier = ">=6.29.1" },
     { name = "kaggle", specifier = ">=1.7" },
     { name = "numpy", specifier = ">=2.0" },
     { name = "pandas", specifier = ">=2.2" },
