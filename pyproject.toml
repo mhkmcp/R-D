@@ -12,6 +12,8 @@ dependencies = [
     "py7zr>=0.22",
     "kaggle>=1.7",
     "torch>=2.11.0",
+    "pillow>=12.3.0",
+    "torchvision>=0.26.0",
 ]
 
 [project.scripts]
@@ -19,6 +21,9 @@ fidnn = "fidnn.cli:main"
 
 [dependency-groups]
 dev = ["pytest>=8", "ruff>=0.6"]
+ui = [
+    "gradio>=6",
+]
 
 [build-system]
 requires = ["hatchling"]

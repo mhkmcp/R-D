@@ -50,9 +50,30 @@ def main(argv: list[str] | None = None) -> None:
     inject.add_argument("--tap-set", choices=["default", "extended"],
                         help="also record per-probe tap features for the fault side (M-3)")
     inject.add_argument("--features-dir", type=Path, default=Path("artifacts/features"))
+    inject.add_argument("--exec", dest="exec_mode", choices=["full", "suffix"],
+                        help="suffix: resume from the clean probe cache (default for int8)")
+    inject.add_argument("--cache-dir", type=Path, default=Path("artifacts/cache"))
     inject.add_argument("--report", type=Path, default=Path("docs/M2_taxonomy.md"),
                         help="with --report-only: re-render the M-2 record from existing outcomes")
     inject.add_argument("--report-only", action="store_true")
+
+    quant = sub.add_parser("quantize", help="persist the INT8 PTQ model every command then loads")
+    quant.add_argument("model", choices=["m1", "m2", "m3"])
+    quant.add_argument("--seed", type=int, default=0)
+    quant.add_argument("--config", type=Path, default=Path("configs/inject/grid.yaml"))
+    quant.add_argument("--data-config", type=Path, default=Path("configs/data/cifar10.yaml"))
+    quant.add_argument("--data-dir", type=Path, default=Path("artifacts/data"))
+    quant.add_argument("--models-dir", type=Path, default=Path("artifacts/models"))
+
+    ui = sub.add_parser("ui", help="plain-language fault demo in the browser (uv sync --group ui)")
+    ui.add_argument("--model", default="m2", choices=["m1", "m2", "m3"])
+    ui.add_argument("--precision", choices=["int8"], default="int8",
+                    help="int8 only: suffix execution is exact there (fidnn.cache)")
+    ui.add_argument("--tap-set", choices=["default", "extended"], default="default")
+    ui.add_argument("--seed", type=int, default=0)
+    ui.add_argument("--port", type=int)
+    ui.add_argument("--export", type=Path,
+                    help="write precomputed scenarios as JSON for the static page; no server")
 
     extract = sub.add_parser("extract", help="M-3 clean per-tap feature extraction")
     extract.add_argument("model", choices=["m1", "m2", "m3"])
@@ -186,8 +207,23 @@ def main(argv: list[str] | None = None) -> None:
         if not args.report_only:
             run.run(args.model, args.precision, args.mode, args.seed, args.config,
                     args.data_config, args.data_dir, args.models_dir, args.out, reps=args.reps,
-                    tap_set=args.tap_set, features_dir=args.features_dir)
+                    tap_set=args.tap_set, features_dir=args.features_dir,
+                    exec_mode=args.exec_mode, cache_dir=args.cache_dir)
         report.write(args.out, args.report)
+    elif args.cmd == "ui" and args.export:
+        from fidnn.demo.export import export
+        from fidnn.demo.session import DemoSession
+        session = DemoSession.from_artifacts(args.model, args.precision, args.tap_set, args.seed)
+        export(session, args.export, seed=args.seed, results_dir=Path("artifacts/results"),
+               m0_dir=Path("artifacts/m0"))
+        print(f"wrote {args.export}")
+    elif args.cmd == "ui":
+        from fidnn.demo.app import launch
+        launch(args.model, args.precision, args.tap_set, args.seed, port=args.port)
+    elif args.cmd == "quantize":
+        from fidnn.models.checkpoint import quantize
+        quantize(args.model, args.seed, args.config, args.data_config, args.data_dir,
+                 args.models_dir)
     elif args.cmd == "train":
         from fidnn.models.registry import config_path
         from fidnn.models.train import train

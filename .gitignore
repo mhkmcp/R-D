@@ -15,3 +15,6 @@ env
 
 # OS
 .DS_Store
+
+# Regenerable clean probe cache, ~1 GB per INT8 model (src/fidnn/cache)
+/artifacts/cache/

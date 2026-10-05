@@ -37,6 +37,19 @@ def _pool(targets: list[Target], bucket: str) -> list[Target]:
     return [t for t in targets if t.bucket == bucket]
 
 
+def sample_flips(pool: list[Target], bits: list[int], budget: int,
+                 rng: np.random.Generator) -> list[dict]:
+    """`budget` distinct (element, bit) pairs over `pool`, so two flips cannot cancel out."""
+    offsets = np.concatenate([[0], np.cumsum([t.numel for t in pool])])
+    out = []
+    for p in rng.choice(offsets[-1] * len(bits), size=budget, replace=False):
+        flat, bit = divmod(int(p), len(bits))
+        k = int(np.searchsorted(offsets, flat, side="right") - 1)
+        out.append({**{f: v for f, v in asdict(pool[k]).items() if f != "bucket"},
+                    "flat_index": flat - int(offsets[k]), "bit": bits[bit]})
+    return out
+
+
 def plan(all_targets: list[Target], mode: str, seed: int, reps: int = 100,
          budgets: tuple[int, ...] = (1, 4, 16)) -> pd.DataFrame:
     """One row per flip; `injection_id` groups the flips applied together (SPEC §4.4 record)."""
@@ -48,20 +61,10 @@ def plan(all_targets: list[Target], mode: str, seed: int, reps: int = 100,
         pool = _pool(targets, bucket)
         if not pool:
             continue
-        sizes = np.array([t.numel for t in pool])
-        offsets = np.concatenate([[0], np.cumsum(sizes)])
-        bits = STRATA[width][stratum]
         for _ in range(reps):
-            # draw distinct (element, bit) pairs so two flips in one injection cannot cancel out
-            picks = rng.choice(offsets[-1] * len(bits), size=budget, replace=False)
-            for p in picks:
-                flat, bit = divmod(int(p), len(bits))
-                k = int(np.searchsorted(offsets, flat, side="right") - 1)
-                t = pool[k]
+            for flip in sample_flips(pool, STRATA[width][stratum], budget, rng):
                 rows.append({"injection_id": injection_id, "mode": mode, "attacker": "L0",
-                             "bucket": bucket, "stratum": stratum, "budget": budget,
-                             **{f: v for f, v in asdict(t).items() if f != "bucket"},
-                             "flat_index": flat - int(offsets[k]), "bit": bits[bit]})
+                             "bucket": bucket, "stratum": stratum, "budget": budget, **flip})
             injection_id += 1
     return pd.DataFrame(rows)
 

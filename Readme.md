@@ -85,6 +85,21 @@ gate says so rather than passing results downstream.
 
 Timings are for an Apple M5; `fidnn bench m0` measures your own machine.
 
+## Try the demo
+
+A browser demo lets anyone see the idea without the command line. You pick a picture, flip bits in
+the 8-bit model's memory, and watch whether the answer changes and whether the detector notices.
+It needs a trained M2 model with fitted detectors (see [Running the study](#running-the-study)).
+
+```bash
+uv sync --group ui
+uv run fidnn quantize m2        # once: saves the 8-bit model so the demo starts fast
+uv run fidnn ui                 # opens http://127.0.0.1:7860
+```
+
+If something is missing, the page lists the commands to run first. To make a shareable,
+self-contained version without a live model, run `uv run fidnn ui --export demo.json`.
+
 ## Documentation
 
 - [`docs/thesis/`](docs/thesis/README.md): the thesis draft, and which artifact fills each table

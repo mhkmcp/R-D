@@ -2,6 +2,7 @@
 
 import time
 from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -15,10 +16,14 @@ from fidnn.inject.taxonomy import label, logit_shift, track
 from fidnn.taps.features import FEATURE_NAMES
 from fidnn.taps.hooks import TapMonitor
 
+if TYPE_CHECKING:
+    from fidnn.cache.suffix import SuffixRunner
 
-def _tap_frame(monitor: "TapMonitor", injection_id: int, probe_index: np.ndarray) -> pd.DataFrame:
+
+def _tap_frame(outputs: dict[str, torch.Tensor], injection_id: int,
+               probe_index: np.ndarray) -> pd.DataFrame:
     frames = []
-    for tap_id, out in monitor.outputs.items():
+    for tap_id, out in outputs.items():
         df = pd.DataFrame(out.numpy(), columns=FEATURE_NAMES)
         df.insert(0, "tap_id", tap_id)
         df.insert(0, "probe_index", probe_index[:len(df)])
@@ -41,11 +46,14 @@ def run(model: nn.Module, plan: pd.DataFrame, probes_x: torch.Tensor, probes_y: 
         probes_per_injection: int = 32, checksum_every: int = 50,
         log: Callable[[str], None] = print,
         monitor: "TapMonitor | None" = None,
-        features_out: list[pd.DataFrame] | None = None) -> pd.DataFrame:
+        features_out: list[pd.DataFrame] | None = None,
+        runner: "SuffixRunner | None" = None) -> pd.DataFrame:
     """One row per (injection, probe). `model` is the fault instance, never the clean one.
 
     With `monitor` attached (M-3 taps), each injection's per-probe tap features are appended to
     `features_out`, keyed by injection_id — this is how fault-side features are produced (§5, §7).
+    With `runner`, logits and features come from `SuffixRunner` over the same fault instance
+    instead of a full forward pass, and `monitor` is not used (`fidnn.cache`).
     """
     rng = np.random.default_rng(seed)
     clean = state_checksum(model)
@@ -57,13 +65,18 @@ def run(model: nn.Module, plan: pd.DataFrame, probes_x: torch.Tensor, probes_y: 
         records = flips.to_dict("records")
         mode = records[0]["mode"]
         with injected_flips(model, records, mode) as applied:
+            taps = monitor.outputs if monitor is not None else None
             try:
-                fl = _logits(model, x)
+                if runner is not None:
+                    fl, taps = runner.run({f["layer"] for f in applied}, idx)
+                else:
+                    fl = _logits(model, x)
             except (RuntimeError, ValueError) as exc:  # a fault that breaks the forward is a CRASH
                 fl = np.full_like(cl, np.nan)
+                taps = runner.partial if runner is not None else taps
                 log(f"injection {injection_id}: forward raised {type(exc).__name__}: {exc}")
-            if monitor is not None and features_out is not None:
-                features_out.append(_tap_frame(monitor, injection_id, idx))
+            if taps is not None and features_out is not None:
+                features_out.append(_tap_frame(taps, injection_id, idx))
         labels = label(cl, fl, y, epsilon, num_classes)
         first = records[0]
         rows.append(pd.DataFrame({

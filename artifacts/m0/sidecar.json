@@ -1,7 +1,7 @@
 {
   "milestone": "M-0",
   "quick": true,
-  "git_commit": "26e2492cc792aa059fe1da8aa21b1a2ff56305fe-dirty",
+  "git_commit": "51697ac19d6c171a30cdf2f91ce8adaaf158b8a6-dirty",
   "config_hash": "d4ab4e616ad00a6c",
   "seed": 0,
   "versions": {
@@ -24,5 +24,5 @@
     "mps"
   ],
   "inputs": "synthetic N(0,1) 32x32x3; random-init weights; INT8 calibrated on random inputs",
-  "timestamp": "2026-09-20T13:48:47+0600"
+  "timestamp": "2026-10-02T15:42:27+0600"
 }

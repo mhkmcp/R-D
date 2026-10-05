@@ -15,9 +15,9 @@
       "test_n": 10000,
       "checkpoint": "artifacts/models/m2_seed0.pt",
       "sha256": "7bb70fb3da103a819e967bfbca8c3aad47cfe6e91b04ae627f082b48de246eee",
-      "train_seconds": 2001,
+      "train_seconds": 2383,
       "train_device": "mps",
-      "git_commit": "26e2492cc792aa059fe1da8aa21b1a2ff56305fe-dirty",
+      "git_commit": "51697ac19d6c171a30cdf2f91ce8adaaf158b8a6-dirty",
       "config_hash": "bc2be10116efb35a",
       "config": {
         "epochs": 164,
@@ -42,7 +42,7 @@
         "numpy": "2.4.6",
         "sklearn": "1.7.2"
       },
-      "timestamp": "2026-09-20T15:54:37+0600"
+      "timestamp": "2026-10-02T16:24:12+0600"
     },
     "m1_seed0": {
       "model": "m1",

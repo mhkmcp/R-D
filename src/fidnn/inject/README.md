@@ -18,7 +18,7 @@ Bit-level fault injection. SPEC §4. The `/fault-injection` skill covers extendi
 | `plan.py` | §4.2 grid: bit strata × buckets × budgets × repetitions → one row per flip |
 | `engine.py` | Applies one injection to a live model and restores it in `finally` |
 | `taxonomy.py` | MASKED / DEGRADED / SDC / CRASH and their tracks |
-| `sweep.py` | Runs a plan over probe batches, labels outcomes, checksums periodically |
+| `sweep.py` | Runs a plan over probe batches, labels outcomes, checksums periodically. With a `SuffixRunner` (`fidnn.cache`), it executes only the graph suffix an injection can change. That is the default for INT8 and bit-identical to the full pass |
 | `run.py` / `report.py` | `fidnn inject`, and the `docs/M2_taxonomy.md` exit record |
 
 ## Why it's built this way

@@ -9,8 +9,8 @@
     "int8_parity": true,
     "m3_int8": true
   },
-  "baseline_hours": 59.179556801294424,
-  "total_hours": 152.69851771168354,
+  "baseline_hours": 67.66597003475312,
+  "total_hours": 174.31644384266193,
   "applied": [
     "More seeds (5 \u2192 10)",
     "Extended tap sets (13 on M2, 10 on M3)",
@@ -20,7 +20,7 @@
   "declined": [
     [
       "L2 adaptive attacker on every arm",
-      304.7415017219429
+      351.41646015473486
     ]
   ]
 }

@@ -11,6 +11,12 @@ from fidnn.taps.registry import TapInfo
 MODES = ("capture", "features")
 
 
+def observe(output: torch.Tensor, sat_threshold: float = float("inf")) -> torch.Tensor:
+    """The per-tap descriptor of one tap output, dequantised first for INT8."""
+    out = output.dequantize() if output.is_quantized else output
+    return tap_features(out.detach(), sat_threshold)
+
+
 class TapMonitor:
     """Forward hooks on `taps`; see `nn.Module.register_forward_hook`. Output in `self.outputs`."""
 
@@ -34,12 +40,11 @@ class TapMonitor:
     def _hook(self, tap_id: str):
         def hook(_module, _inputs, output):
             self.calls[tap_id] += 1
-            out = output.dequantize() if output.is_quantized else output
             if self.mode == "capture":
+                out = output.dequantize() if output.is_quantized else output
                 self.outputs[tap_id] = out.detach()
             else:
-                self.outputs[tap_id] = tap_features(
-                    out.detach(), self.sat.get(tap_id, float("inf")))
+                self.outputs[tap_id] = observe(output, self.sat.get(tap_id, float("inf")))
         return hook
 
     def remove(self) -> None:
