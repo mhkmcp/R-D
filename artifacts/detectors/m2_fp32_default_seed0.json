@@ -1,0 +1,349 @@
+{
+  "model": "m2",
+  "precision": "fp32",
+  "tap_set": "default",
+  "taps": [
+    "stem",
+    "stage1",
+    "stage2",
+    "stage3",
+    "pooled",
+    "logits"
+  ],
+  "thesis_result": null,
+  "selection": {
+    "D2": {
+      "nu": 0.1,
+      "gamma": "scale",
+      "gamma_kind": "scale",
+      "clean_cal_fpr": 0.009,
+      "sv_fraction": 0.10483333333333333,
+      "trials": "see parquet"
+    },
+    "D1": {
+      "stem": 0.005,
+      "stage1": 0.1,
+      "stage2": 0.05,
+      "stage3": 0.05,
+      "pooled": 0.1,
+      "logits": 0.05
+    }
+  },
+  "dropped_features": [
+    [
+      "stem",
+      "min"
+    ],
+    [
+      "stem",
+      "q01"
+    ],
+    [
+      "stem",
+      "q25"
+    ],
+    [
+      "stem",
+      "nan_count"
+    ],
+    [
+      "stem",
+      "inf_count"
+    ],
+    [
+      "stem",
+      "e_l2_ratio"
+    ],
+    [
+      "stem",
+      "e_entropy_ratio"
+    ],
+    [
+      "stem",
+      "e_sat_diff"
+    ],
+    [
+      "stage1",
+      "min"
+    ],
+    [
+      "stage1",
+      "q01"
+    ],
+    [
+      "stage1",
+      "nan_count"
+    ],
+    [
+      "stage1",
+      "inf_count"
+    ],
+    [
+      "stage2",
+      "min"
+    ],
+    [
+      "stage2",
+      "q01"
+    ],
+    [
+      "stage2",
+      "q25"
+    ],
+    [
+      "stage2",
+      "nan_count"
+    ],
+    [
+      "stage2",
+      "inf_count"
+    ],
+    [
+      "stage3",
+      "min"
+    ],
+    [
+      "stage3",
+      "q01"
+    ],
+    [
+      "stage3",
+      "q25"
+    ],
+    [
+      "stage3",
+      "nan_count"
+    ],
+    [
+      "stage3",
+      "inf_count"
+    ],
+    [
+      "pooled",
+      "zero_frac"
+    ],
+    [
+      "pooled",
+      "sat_frac"
+    ],
+    [
+      "pooled",
+      "nan_count"
+    ],
+    [
+      "pooled",
+      "inf_count"
+    ],
+    [
+      "pooled",
+      "ch_std_mean"
+    ],
+    [
+      "pooled",
+      "ch_std_std"
+    ],
+    [
+      "logits",
+      "zero_frac"
+    ],
+    [
+      "logits",
+      "sat_frac"
+    ],
+    [
+      "logits",
+      "nan_count"
+    ],
+    [
+      "logits",
+      "inf_count"
+    ],
+    [
+      "logits",
+      "ch_std_mean"
+    ],
+    [
+      "logits",
+      "ch_std_std"
+    ],
+    [
+      "logits",
+      "e_sat_diff"
+    ]
+  ],
+  "detector_kb": 21001.9,
+  "calibration": [
+    {
+      "detector": "D1",
+      "alpha": 0.05,
+      "tau": 21.32549127729426,
+      "n": 2000,
+      "alarms": 114,
+      "fpr": 0.057,
+      "fpr_upper95": 0.06627157733822142,
+      "fpr_ratio": 1.14
+    },
+    {
+      "detector": "D1",
+      "alpha": 0.01,
+      "tau": 51.74451899147215,
+      "n": 2000,
+      "alarms": 26,
+      "fpr": 0.013,
+      "fpr_upper95": 0.017992800663733204,
+      "fpr_ratio": 1.2999999999999998
+    },
+    {
+      "detector": "D1",
+      "alpha": 0.001,
+      "tau": 203.7022599780179,
+      "n": 2000,
+      "alarms": 3,
+      "fpr": 0.0015,
+      "fpr_upper95": 0.003872223150157523,
+      "fpr_ratio": 1.5
+    },
+    {
+      "detector": "D2",
+      "alpha": 0.05,
+      "tau": 6.4486657121965445,
+      "n": 2000,
+      "alarms": 92,
+      "fpr": 0.046,
+      "fpr_upper95": 0.05446502429452323,
+      "fpr_ratio": 0.9199999999999999
+    },
+    {
+      "detector": "D2",
+      "alpha": 0.01,
+      "tau": 18.28243283212697,
+      "n": 2000,
+      "alarms": 26,
+      "fpr": 0.013,
+      "fpr_upper95": 0.017992800663733204,
+      "fpr_ratio": 1.2999999999999998
+    },
+    {
+      "detector": "D2",
+      "alpha": 0.001,
+      "tau": 31.064875056613488,
+      "n": 2000,
+      "alarms": 3,
+      "fpr": 0.0015,
+      "fpr_upper95": 0.003872223150157523,
+      "fpr_ratio": 1.5
+    },
+    {
+      "detector": "D3_max",
+      "alpha": 0.05,
+      "tau": 0.99,
+      "n": 2000,
+      "alarms": 105,
+      "fpr": 0.0525,
+      "fpr_upper95": 0.061453873584105936,
+      "fpr_ratio": 1.0499999999999998
+    },
+    {
+      "detector": "D3_max",
+      "alpha": 0.01,
+      "tau": 0.998,
+      "n": 2000,
+      "alarms": 23,
+      "fpr": 0.0115,
+      "fpr_upper95": 0.016253606871647706,
+      "fpr_ratio": 1.15
+    },
+    {
+      "detector": "D3_max",
+      "alpha": 0.001,
+      "tau": 1.0,
+      "n": 2000,
+      "alarms": 0,
+      "fpr": 0.0,
+      "fpr_upper95": 0.0014967448951882837,
+      "fpr_ratio": 0.0
+    },
+    {
+      "detector": "D3_mean",
+      "alpha": 0.05,
+      "tau": 0.7871666666666667,
+      "n": 2000,
+      "alarms": 97,
+      "fpr": 0.0485,
+      "fpr_upper95": 0.057157567238939506,
+      "fpr_ratio": 0.97
+    },
+    {
+      "detector": "D3_mean",
+      "alpha": 0.01,
+      "tau": 0.8774274999999999,
+      "n": 2000,
+      "alarms": 25,
+      "fpr": 0.0125,
+      "fpr_upper95": 0.01741470614717782,
+      "fpr_ratio": 1.25
+    },
+    {
+      "detector": "D3_mean",
+      "alpha": 0.001,
+      "tau": 0.9482690833333327,
+      "n": 2000,
+      "alarms": 7,
+      "fpr": 0.0035,
+      "fpr_upper95": 0.006563954853350077,
+      "fpr_ratio": 3.5
+    },
+    {
+      "detector": "D3_fpr_weighted",
+      "alpha": 0.05,
+      "tau": 0.7871666666666666,
+      "n": 2000,
+      "alarms": 97,
+      "fpr": 0.0485,
+      "fpr_upper95": 0.057157567238939506,
+      "fpr_ratio": 0.97
+    },
+    {
+      "detector": "D3_fpr_weighted",
+      "alpha": 0.01,
+      "tau": 0.8774274999999999,
+      "n": 2000,
+      "alarms": 25,
+      "fpr": 0.0125,
+      "fpr_upper95": 0.01741470614717782,
+      "fpr_ratio": 1.25
+    },
+    {
+      "detector": "D3_fpr_weighted",
+      "alpha": 0.001,
+      "tau": 0.9482690833333329,
+      "n": 2000,
+      "alarms": 7,
+      "fpr": 0.0035,
+      "fpr_upper95": 0.006563954853350077,
+      "fpr_ratio": 3.5
+    }
+  ],
+  "fault_features": null,
+  "git_commit": "6c0b0e850cd3fe87604dd138a58cf0fb69e3af32-dirty",
+  "config_hash": "1e74505a0460705d",
+  "config": {
+    "alpha": 0.01,
+    "alphas": [
+      0.05,
+      0.01,
+      0.001
+    ],
+    "iqr_floor": 1e-08,
+    "pca_components": 16
+  },
+  "seed": 0,
+  "device": "cpu",
+  "versions": {
+    "python": "3.11.16",
+    "torch": "2.14.0",
+    "numpy": "2.4.6",
+    "sklearn": "1.7.2"
+  },
+  "timestamp": "2026-10-06T20:30:16+0600"
+}

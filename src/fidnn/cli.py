@@ -143,6 +143,20 @@ def main(argv: list[str] | None = None) -> None:
     attack.add_argument("--report", type=Path, help="default: M1b_bfa.md (bfa) or M8_adaptive.md")
     attack.add_argument("--report-only", action="store_true")
 
+    exp = sub.add_parser("export", help="standalone ONNX bundle: classifier + monitor "
+                                        "(uv sync --group deploy)")
+    exp.add_argument("model", choices=["m1", "m2", "m3"])
+    exp.add_argument("--precision", choices=["fp32"], default="fp32")
+    exp.add_argument("--tap-set", choices=["default", "extended"], default="default")
+    exp.add_argument("--seed", type=int, default=0)
+    exp.add_argument("--detector", choices=["D2"], default="D2")
+    exp.add_argument("--data-config", type=Path, default=Path("configs/data/cifar10.yaml"))
+    exp.add_argument("--data-dir", type=Path, default=Path("artifacts/data"))
+    exp.add_argument("--models-dir", type=Path, default=Path("artifacts/models"))
+    exp.add_argument("--features-dir", type=Path, default=Path("artifacts/features"))
+    exp.add_argument("--detectors-dir", type=Path, default=Path("artifacts/detectors"))
+    exp.add_argument("--out", type=Path, default=Path("artifacts/deploy"))
+
     for name, milestone in LATER.items():
         sub.add_parser(name, help=f"not implemented until {milestone}")
 
@@ -187,6 +201,11 @@ def main(argv: list[str] | None = None) -> None:
     elif args.cmd == "report":
         from fidnn.eval import report as eval_report
         eval_report.write(args.results_dir, args.out)
+    elif args.cmd == "export":
+        from fidnn.deploy import export
+        export.run(args.model, args.precision, args.tap_set, args.seed, args.detector,
+                   args.data_config, args.data_dir, args.models_dir, args.features_dir,
+                   args.detectors_dir, args.out)
     elif args.cmd == "attack" and args.kind == "bfa":
         from fidnn.attack import run as attack_run
         if not args.report_only:

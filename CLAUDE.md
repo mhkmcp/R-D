@@ -60,6 +60,7 @@ make reproduce                                # M-5: eval + headline tables
 uv run python -m fidnn ui                     # plain-language demo (uv sync --group ui); --export for static page
 uv run python -m fidnn overhead m2            # M-6: latency/memory per K
 uv run python -m fidnn attack l2 --model m2   # M-8: adaptive attacker, with vs without
+uv run python -m fidnn export m2              # standalone ONNX bundle (uv sync --group deploy --group ui)
 uv run python -m fidnn <cmd> --help
 ```
 
