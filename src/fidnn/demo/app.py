@@ -114,11 +114,7 @@ def build_app(session: DemoSession):
 
     with gr.Blocks(title="fidnn — fault detection demo") as demo:
         gr.Markdown(
-            "# Can we catch a corrupted neural network?\n"
-            "A neural network's knowledge lives in millions of numbers stored in memory. "
-            "A hardware fault or an attack can **flip a single bit** of one of them. "
-            "Pick a picture, damage the model's memory, and see whether the answer changes "
-            "and whether the detector notices.")
+            "# Demo: Faul-Injection Detection\n")
         image = gr.State(int(picks[0]))
         with gr.Row(equal_height=False):
             with gr.Column(scale=1, min_width=260):
