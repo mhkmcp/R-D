@@ -67,13 +67,14 @@ logits, probs, pred, score, alarms = s.run(None, {"images": images_uint8_nhwc})
 **TFLite / LiteRT.** Input is (1, 32, 32, 3) RGB, pixel values 0–255:
 - float32 files take raw 0–255 floats;
 - the INT8 file takes int8, quantised with the input tensor's scale and zero point:
-  `q = round(pixel / scale + zero_point)`. `manifest.json` records both.
+  `q = round(pixel / scale + zero_point)`. For this model that is simply `pixel − 128`.
+  `manifest.json` records both.
 
 **Microcontrollers.**
 1. Add `classifier_int8_tflite.h` to the firmware.
 2. Create a `tflite::MicroInterpreter` over `classifier_int8_tflite`.
-3. Register Conv2D, Add, Pad, StridedSlice, Mean, FullyConnected, Reshape, Quantize and
-   Dequantize.
+3. Register exactly these operators: Conv2D, Add, Pad, StridedSlice, Sub, Mul, Mean and
+   FullyConnected.
 4. Give it a tensor arena of about 100 KB, and increase it until `AllocateTensors()` succeeds.
 
 ## Limits

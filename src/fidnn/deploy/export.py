@@ -28,7 +28,7 @@ from fidnn.taps.registry import taps
 BUNDLE_FILES = Path(__file__).parent / "bundle"
 OUTPUTS = ["logits", "probs", "pred", "score", "alarms"]
 CHECK_N = 16
-UI_SAMPLES = 40
+UI_PER_CLASS = 20  # balanced, so per-class precision/recall in the UI rest on equal counts
 SCORE_TOL = 0.1  # FP32 kernel rounding between PyTorch and ORT; the decision is checked exactly
 ORT_WEB = "1.30.0"
 ORT_WEB_FILES = ("ort.wasm.min.js", "ort-wasm-simd-threaded.mjs", "ort-wasm-simd-threaded.wasm")
@@ -70,6 +70,26 @@ def _weight_table(path: Path) -> list[dict]:
         table.append({"name": init.name.removeprefix("model."), "offset": offset,
                       "numel": int(w.size), "shape": list(w.shape)})
     return table
+
+
+def _balanced(y: np.ndarray, per_class: int) -> np.ndarray:
+    """First `per_class` indices of each class, interleaved so any prefix is near-balanced."""
+    groups = [np.flatnonzero(y == c)[:per_class] for c in np.unique(y)]
+    return np.stack(groups, 1).reshape(-1)
+
+
+def _classifier_metrics(pred: np.ndarray, y: np.ndarray, classes: list[str]) -> dict:
+    """Accuracy and per-class / macro precision, recall, F1 — reference for the UI."""
+    from sklearn.metrics import precision_recall_fscore_support
+
+    p, r, f, n = precision_recall_fscore_support(y, pred, labels=range(len(classes)),
+                                                 zero_division=0)
+    return {"n": len(y), "accuracy": float((pred == y).mean()),
+            "macro": {"precision": float(p.mean()), "recall": float(r.mean()),
+                      "f1": float(f.mean())},
+            "per_class": {c: {"precision": float(p[i]), "recall": float(r[i]),
+                              "f1": float(f[i]), "support": int(n[i])}
+                          for i, c in enumerate(classes)}}
 
 
 def _samples(x: np.ndarray, y: np.ndarray, classes: list[str]) -> list[dict]:
@@ -183,7 +203,8 @@ def run(model_id: str, precision: str, tap_set: str, seed: int, detector: str, d
     ui = out / "ui"
     shutil.copytree(BUNDLE_FILES / "ui", ui)
     ort_web = _ort_web(cache_dir / f"onnxruntime-web-{ORT_WEB}", ui)
-    sx, sy = x[:UI_SAMPLES], y[:UI_SAMPLES]
+    pick = _balanced(y, UI_PER_CLASS)
+    sx, sy = x[pick], y[pick]
     (ui / "samples.json").write_text(json.dumps(_samples(sx, sy, classes)))
     for f in ("run.py", "README.md", "requirements.txt"):
         shutil.copy(BUNDLE_FILES / f, out / f)
@@ -224,7 +245,15 @@ def run(model_id: str, precision: str, tap_set: str, seed: int, detector: str, d
                      "added_latency_pct": round(100 * (full - base) / base, 1),
                      "measured_on": "export host — re-measure on the target device"},
         "ui": {"runtime": f"onnxruntime-web {ORT_WEB}", "sha256": ort_web,
-               "samples": f"{len(sx)} clean_test images"},
+               "samples": f"{len(sx)} clean_test images, {UI_PER_CLASS} per class"},
+        "metrics": {
+            "measured_on": f"clean_test ({len(x)} images), original model",
+            "classifier": _classifier_metrics(o["pred"], y, classes),
+            "monitor_false_alarm_rate": {str(a): float(o["alarms"][:, k].mean())
+                                         for k, a in enumerate(cal.alpha)},
+            "note": ("Detection recall needs faulty inferences; the UI measures it live by "
+                     "corrupting the model in the browser."),
+        },
         "caveats": [
             "Exported from one training seed: a demonstration, not a reported thesis number (C4).",
             ("Expects CIFAR-10-like 32×32 natural images; other inputs are out of distribution "

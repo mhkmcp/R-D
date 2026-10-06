@@ -64,3 +64,18 @@ def test_onnx_round_trip(graph, tmp_path):
     out = ort.InferenceSession(str(path)).run(None, {"images": x.numpy()})
     np.testing.assert_allclose(out[3], expected, rtol=1e-3, atol=1e-3)
     assert out[4].shape == (len(x), 1)
+
+
+def test_classifier_layouts_agree():
+    from fidnn.deploy.formats import Classifier
+
+    torch.manual_seed(0)
+    model = build("m1").eval()
+    x = torch.randint(0, 256, (4, 32, 32, 3), dtype=torch.uint8)
+    mean, std = [0.5, 0.4, 0.3], [0.2, 0.25, 0.3]
+    nhwc = Classifier(model, mean, std)(x)
+    nchw = Classifier(model, mean, std, nhwc_uint8=False)(x.permute(0, 3, 1, 2).float())
+    xn = (x.permute(0, 3, 1, 2).float() / 255 - torch.tensor(mean).view(1, 3, 1, 1)) \
+        / torch.tensor(std).view(1, 3, 1, 1)
+    torch.testing.assert_close(nhwc, model(xn), rtol=1e-4, atol=1e-4)
+    torch.testing.assert_close(nchw, nhwc, rtol=1e-4, atol=1e-4)

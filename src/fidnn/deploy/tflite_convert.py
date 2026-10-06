@@ -5,6 +5,7 @@ Usage: python tflite_convert.py <nchw.onnx> <calib.npy> <test_x.npy> <test_y.npy
 """
 
 import json
+import os
 import shutil
 import sys
 import tempfile
@@ -71,8 +72,14 @@ def main(onnx_path, calib_path, x_path, y_path, out_dir) -> None:
     results = {name: evaluate(out_dir / name, x, y) for name in picks}
     (out_dir / "classifier_int8_tflite.h").write_text(
         c_header(out_dir / "classifier_int8.tflite", "classifier_int8_tflite"))
-    print(json.dumps(results))
+    (out_dir / RESULTS).write_text(json.dumps(results))
 
+
+RESULTS = "_tflite_results.json"
 
 if __name__ == "__main__":
     main(*sys.argv[1:6])
+    # TensorFlow and LiteRT in one process can abort in a mutex during interpreter teardown;
+    # the results are on disk by now, so skip the teardown entirely
+    sys.stdout.flush()
+    os._exit(0)

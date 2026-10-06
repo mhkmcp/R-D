@@ -106,6 +106,9 @@ def tflite(nchw_onnx: Path, calib: np.ndarray, x: np.ndarray, y: np.ndarray, out
                *(a for p in TFLITE_ENV for a in ("--with", p)), "python", str(script),
                str(nchw_onnx), str(files["calib"]), str(files["x"]), str(files["y"]), str(out)]
         r = subprocess.run(cmd, capture_output=True, text=True, check=False)
-    if r.returncode:
+    results = out / "_tflite_results.json"
+    if r.returncode or not results.exists():
         raise RuntimeError(f"TFLite conversion failed:\n{r.stderr[-2000:]}")
-    return json.loads(r.stdout.strip().splitlines()[-1])
+    data = json.loads(results.read_text())
+    results.unlink()
+    return data
