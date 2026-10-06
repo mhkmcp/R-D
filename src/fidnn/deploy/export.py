@@ -79,16 +79,17 @@ def _balanced(y: np.ndarray, per_class: int) -> np.ndarray:
 
 
 def _classifier_metrics(pred: np.ndarray, y: np.ndarray, classes: list[str]) -> dict:
-    """Accuracy and per-class / macro precision, recall, F1 — reference for the UI."""
+    """Accuracy and per-class / macro precision, recall, F1, F2 — reference for the UI."""
     from sklearn.metrics import precision_recall_fscore_support
 
-    p, r, f, n = precision_recall_fscore_support(y, pred, labels=range(len(classes)),
-                                                 zero_division=0)
+    labels = range(len(classes))
+    p, r, f, n = precision_recall_fscore_support(y, pred, labels=labels, zero_division=0)
+    f2 = precision_recall_fscore_support(y, pred, labels=labels, beta=2, zero_division=0)[2]
     return {"n": len(y), "accuracy": float((pred == y).mean()),
             "macro": {"precision": float(p.mean()), "recall": float(r.mean()),
-                      "f1": float(f.mean())},
+                      "f1": float(f.mean()), "f2": float(f2.mean())},
             "per_class": {c: {"precision": float(p[i]), "recall": float(r[i]),
-                              "f1": float(f[i]), "support": int(n[i])}
+                              "f1": float(f[i]), "f2": float(f2[i]), "support": int(n[i])}
                           for i, c in enumerate(classes)}}
 
 
