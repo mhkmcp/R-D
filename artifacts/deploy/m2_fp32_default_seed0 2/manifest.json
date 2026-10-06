@@ -1,0 +1,131 @@
+{
+  "name": "fidnn ResNet-20 + D2 fault monitor",
+  "thesis_result": false,
+  "files": {
+    "model": "model.onnx",
+    "check": "check.npz",
+    "runner": "run.py"
+  },
+  "sha256": {
+    "model": "7b3eb08b616e97a7870a7164545177c87aa14b4879f92462bae3499bfddd584c",
+    "check": "65eb3ec2429f91701766a0aad5f7f046605639df2250bfda453975caa775cd73"
+  },
+  "input": {
+    "name": "images",
+    "dtype": "uint8",
+    "shape": [
+      "N",
+      32,
+      32,
+      3
+    ],
+    "layout": "NHWC RGB, 0\u2013255; normalisation is inside the graph"
+  },
+  "outputs": {
+    "logits": "(N, C) float32",
+    "probs": "(N, C) softmax",
+    "pred": "(N,) int64 class index",
+    "score": "(N,) float64 D2 score",
+    "alarms": "(N, len(alphas)) bool, one column per alpha"
+  },
+  "classes": [
+    "airplane",
+    "automobile",
+    "bird",
+    "cat",
+    "deer",
+    "dog",
+    "frog",
+    "horse",
+    "ship",
+    "truck"
+  ],
+  "classifier": {
+    "model": "m2",
+    "architecture": "ResNet-20",
+    "precision": "fp32",
+    "seed": 0,
+    "test_acc_fp32": 90.42,
+    "clean_test_acc_onnx": 90.95,
+    "checkpoint_sha256": "7bb70fb3da103a819e967bfbca8c3aad47cfe6e91b04ae627f082b48de246eee"
+  },
+  "monitor": {
+    "detector": "D2",
+    "taps": [
+      "stem",
+      "stage1",
+      "stage2",
+      "stage3",
+      "pooled",
+      "logits"
+    ],
+    "features_per_tap": 29,
+    "alphas": [
+      0.05,
+      0.01,
+      0.001
+    ],
+    "thresholds": [
+      6.4486657121965445,
+      18.28243283212697,
+      31.064875056613488
+    ],
+    "calibrated_on": "clean_cal",
+    "clean_test_fpr": {
+      "0.05": 0.046,
+      "0.01": 0.013,
+      "0.001": 0.0015
+    },
+    "svdd": {
+      "nu": 0.1,
+      "gamma": 0.009117887354993616,
+      "support_vectors": 629
+    }
+  },
+  "check": {
+    "n": 16,
+    "score_tolerance": 0.1,
+    "onnx_vs_fidnn": {
+      "n": 2000,
+      "alarm_agreement": {
+        "0.05": 1.0,
+        "0.01": 1.0,
+        "0.001": 1.0
+      },
+      "max_score_error": 0.06770914162639485
+    }
+  },
+  "overhead": {
+    "device": "cpu",
+    "runtime": "onnxruntime 1.30.0",
+    "batch": 1,
+    "reps": 200,
+    "classifier_ms": 0.5845,
+    "monitored_ms": 2.5745,
+    "added_latency_pct": 340.4,
+    "classifier_onnx_kb": 1171.1,
+    "measured_on": "export host \u2014 re-measure on the target device"
+  },
+  "caveats": [
+    "Exported from one training seed: a demonstration, not a reported thesis number (C4).",
+    "Expects CIFAR-10-like 32\u00d732 natural images; other inputs are out of distribution and may be flagged (or not) for reasons unrelated to faults.",
+    "The clean false-alarm rate holds only for inputs like the calibration data."
+  ],
+  "git_commit": "fc9eb39cc65fba38e113959a86290ecd6d0fb9b7-dirty",
+  "config_hash": "f185e4a96b144fb1",
+  "config": {
+    "model": "m2",
+    "precision": "fp32",
+    "tap_set": "default",
+    "detector": "D2"
+  },
+  "seed": 0,
+  "device": "cpu",
+  "versions": {
+    "python": "3.11.16",
+    "torch": "2.14.0",
+    "numpy": "2.4.6",
+    "sklearn": "1.7.2"
+  },
+  "timestamp": "2026-10-06T21:13:57+0600"
+}

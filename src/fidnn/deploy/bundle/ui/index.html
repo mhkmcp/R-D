@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fault Monitor Demo</title>
+<style>
+  :root {
+    --bg: #f7f7f5; --card: #ffffff; --ink: #1d1d1b; --muted: #6b6b66; --line: #e3e3de;
+    --ok: #1f7a4d; --ok-bg: #e5f4ec; --bad: #b3261e; --bad-bg: #fbe9e7; --warn: #8a5a00;
+    --warn-bg: #fff3d6; --accent: #2f5bd3; --bar: #d9dfee;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #151514; --card: #1f1f1d; --ink: #ecece8; --muted: #a3a39c; --line: #34342f;
+      --ok: #6fd3a0; --ok-bg: #173126; --bad: #ff8a80; --bad-bg: #3a1b18; --warn: #f2c25b;
+      --warn-bg: #3a2e12; --accent: #8fa9ff; --bar: #2e3550;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { padding: 20px 16px 8px; max-width: 1100px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  header p { margin: 0; color: var(--muted); }
+  main { max-width: 1100px; margin: 0 auto; padding: 8px 16px 40px;
+         display: grid; gap: 16px; grid-template-columns: 1fr; }
+  @media (min-width: 900px) { main { grid-template-columns: 1.1fr 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+          padding: 16px; min-width: 0; }
+  .card h2 { font-size: 16px; margin: 0 0 12px; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+             gap: 6px; margin: 10px 0; }
+  .gallery canvas { width: 100%; aspect-ratio: 1; image-rendering: pixelated; cursor: pointer;
+                    border-radius: 6px; border: 2px solid transparent; }
+  .gallery canvas.sel { border-color: var(--accent); }
+  #view { width: 128px; height: 128px; image-rendering: pixelated; border-radius: 8px;
+          border: 1px solid var(--line); flex: none; }
+  .pred { font-size: 20px; font-weight: 600; }
+  .bars { margin-top: 6px; }
+  .bar { display: grid; grid-template-columns: 90px 1fr 48px; gap: 8px; align-items: center;
+         font-size: 13px; margin: 2px 0; }
+  .bar i { display: block; height: 8px; background: var(--bar); border-radius: 4px; }
+  .bar i b { display: block; height: 100%; background: var(--accent); border-radius: 4px; }
+  .chip { display: inline-block; padding: 4px 10px; border-radius: 999px; font-weight: 600;
+          font-size: 13px; }
+  .ok { color: var(--ok); background: var(--ok-bg); }
+  .bad { color: var(--bad); background: var(--bad-bg); }
+  .warn { color: var(--warn); background: var(--warn-bg); }
+  .meter { position: relative; height: 10px; background: var(--bar); border-radius: 5px;
+           margin: 8px 0 2px; overflow: hidden; }
+  .meter b { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); }
+  .meter s { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--bad); }
+  label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 4px; }
+  select, input[type=number], button { font: inherit; color: var(--ink); background: var(--card);
+         border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; max-width: 100%; }
+  button { cursor: pointer; }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  button:disabled { opacity: .5; cursor: default; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
+  .stat { border: 1px solid var(--line); border-radius: 10px; padding: 10px; }
+  .stat .v { font-size: 22px; font-weight: 600; }
+  .flips { font: 12px/1.5 ui-monospace, Menlo, monospace; max-height: 140px; overflow: auto;
+           margin-top: 8px; color: var(--muted); }
+  #status { margin-top: 8px; }
+  .full { grid-column: 1 / -1; }
+  footer { max-width: 1100px; margin: 0 auto; padding: 0 16px 24px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Image classifier with a built-in fault monitor</h1>
+  <p>Everything runs in this browser from <code>model.onnx</code>. No server-side computation, no
+     training data.</p>
+</header>
+<main>
+  <section class="card">
+    <h2>1 · Pick a picture</h2>
+    <div class="row">
+      <label style="margin:0">
+        <input type="file" id="upload" accept="image/*" capture="environment" hidden>
+        <button id="uploadBtn">Upload or take a photo</button>
+      </label>
+      <span class="muted">or choose one of the test pictures below</span>
+    </div>
+    <div class="gallery" id="gallery"></div>
+    <div class="row" style="align-items:flex-start">
+      <canvas id="view" width="32" height="32"></canvas>
+      <div style="flex:1;min-width:200px">
+        <div class="muted" id="truth"></div>
+        <div class="pred" id="pred">…</div>
+        <div class="bars" id="bars"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>2 · What the monitor says</h2>
+    <div class="row">
+      <span class="chip" id="verdict">…</span>
+      <span class="chip" id="answer" hidden></span>
+    </div>
+    <div class="meter"><b id="meterFill"></b><s id="meterTau"></s></div>
+    <div class="muted" id="scoreText"></div>
+    <div style="margin-top:12px">
+      <label for="alpha">Allowed false alarms on a healthy model</label>
+      <select id="alpha"></select>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="muted">Accuracy on test pictures</div>
+        <div class="v" id="acc">…</div></div>
+      <div class="stat"><div class="muted">Pictures flagged</div>
+        <div class="v" id="flag">…</div></div>
+      <div class="stat"><div class="muted">Window alarm (3 of 8)</div>
+        <div class="v" id="win">…</div></div>
+    </div>
+    <p class="muted">A corrupted weight affects every picture, so the monitor looks at many
+      pictures at once. A healthy model still flags about the allowed share of them.</p>
+  </section>
+
+  <section class="card full">
+    <h2>3 · Corrupt the model's memory</h2>
+    <p class="muted" style="margin-top:0">This flips bits in a copy of the model's weights, the
+      way a memory fault or a bit-flip attack would. The file on disk is never changed.</p>
+    <div class="grid2">
+      <div><label for="layer">Layer</label><select id="layer" style="width:100%"></select></div>
+      <div><label for="bit">Which bit of the 32-bit number</label>
+        <select id="bit" style="width:100%">
+          <option value="30">bit 30 · top exponent bit (usually severe)</option>
+          <option value="31">bit 31 · sign</option>
+          <option value="27">bit 27 · middle exponent bit</option>
+          <option value="23">bit 23 · lowest exponent bit</option>
+          <option value="22">bit 22 · top mantissa bit</option>
+          <option value="3">bit 3 · low mantissa bit (usually harmless)</option>
+        </select></div>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <label style="margin:0">How many weights
+        <input type="number" id="count" value="1" min="1" max="256" style="width:80px"></label>
+      <button class="primary" id="inject">Flip bits</button>
+      <button id="restore">Restore the original model</button>
+      <span class="chip ok" id="modelState">Model intact</span>
+    </div>
+    <div class="flips" id="flips"></div>
+    <div class="muted" id="status">Loading model…</div>
+  </section>
+</main>
+<footer class="muted" id="foot"></footer>
+
+<script src="ort.wasm.min.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+ort.env.wasm.wasmPaths = './';
+ort.env.wasm.numThreads = 1;
+
+const S = { manifest: null, original: null, session: null, samples: [], current: null,
+            cleanPred: [], flips: [], alpha: 1, busy: false };
+const N_PIX = 32 * 32 * 3;
+
+function draw(canvas, pixels) {
+  const ctx = canvas.getContext('2d'), img = ctx.createImageData(32, 32);
+  for (let i = 0, j = 0; i < N_PIX; i += 3, j += 4) {
+    img.data[j] = pixels[i]; img.data[j + 1] = pixels[i + 1]; img.data[j + 2] = pixels[i + 2];
+    img.data[j + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+async function fileToPixels(file) {
+  const bmp = await createImageBitmap(file);
+  const c = new OffscreenCanvas(32, 32), ctx = c.getContext('2d');
+  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(bmp, 0, 0, 32, 32);
+  const rgba = ctx.getImageData(0, 0, 32, 32).data, px = new Uint8Array(N_PIX);
+  for (let i = 0, j = 0; i < N_PIX; i += 3, j += 4) {
+    px[i] = rgba[j]; px[i + 1] = rgba[j + 1]; px[i + 2] = rgba[j + 2];
+  }
+  return px;
+}
+
+async function infer(list) {
+  const data = new Uint8Array(list.length * N_PIX);
+  list.forEach((p, k) => data.set(p, k * N_PIX));
+  const o = await S.session.run({ images: new ort.Tensor('uint8', data, [list.length, 32, 32, 3]) });
+  const c = S.manifest.classes.length, na = S.manifest.monitor.alphas.length;
+  return list.map((_, k) => ({
+    probs: Array.from(o.probs.data.slice(k * c, (k + 1) * c)),
+    pred: Number(o.pred.data[k]),
+    score: Number(o.score.data[k]),
+    alarms: Array.from(o.alarms.data.slice(k * na, (k + 1) * na)).map(Boolean),
+  }));
+}
+
+function windowAlarm(flags, n = 8, m = 3) {
+  for (let i = 0; i < flags.length; i++) {
+    let s = 0;
+    for (let j = Math.max(0, i - n + 1); j <= i; j++) s += flags[j];
+    if (s >= m) return true;
+  }
+  return false;
+}
+
+function pct(v) { return (100 * v).toFixed(v < 0.1 ? 1 : 0) + '%'; }
+
+async function refresh() {
+  if (!S.session || !S.current) return;
+  const k = S.alpha, tau = S.manifest.monitor.thresholds[k];
+  const [r] = await infer([S.current.pixels]);
+  const cls = S.manifest.classes;
+  $('pred').textContent = `${cls[r.pred]} · ${pct(r.probs[r.pred])}`;
+  $('truth').textContent = S.current.label ? `Correct answer: ${S.current.label}` : 'Your picture';
+  const top = r.probs.map((p, i) => [p, i]).sort((a, b) => b[0] - a[0]).slice(0, 3);
+  $('bars').innerHTML = top.map(([p, i]) =>
+    `<div class="bar"><span>${cls[i]}</span><i><b style="width:${(100 * p).toFixed(1)}%"></b></i>` +
+    `<span>${pct(p)}</span></div>`).join('');
+  const flagged = r.alarms[k];
+  $('verdict').className = 'chip ' + (flagged ? 'bad' : 'ok');
+  $('verdict').textContent = flagged ? 'Monitor: suspicious' : 'Monitor: looks normal';
+  const lo = -25, hi = Math.max(45, tau * 1.4);
+  const pos = v => Math.min(100, Math.max(0, 100 * (v - lo) / (hi - lo)));
+  $('meterFill').style.width = (Number.isFinite(r.score) ? pos(r.score) : 100) + '%';
+  $('meterTau').style.left = pos(tau) + '%';
+  $('scoreText').textContent = `Monitor score ${Number.isFinite(r.score) ? r.score.toFixed(2) : '∞'}` +
+    ` · threshold ${tau.toFixed(2)} (red line)`;
+
+  const ans = $('answer');
+  if (S.flips.length && S.current.cleanPred !== undefined) {
+    const same = r.pred === S.current.cleanPred;
+    ans.hidden = false;
+    ans.className = 'chip ' + (same ? 'warn' : 'bad');
+    ans.textContent = same ? 'Answer unchanged by the fault' : 'Answer changed by the fault';
+  } else ans.hidden = true;
+
+  const all = await infer(S.samples.map(s => s.pixels));
+  const correct = all.filter((o, i) => cls[o.pred] === S.samples[i].label).length;
+  const flags = all.map(o => o.alarms[k] ? 1 : 0);
+  $('acc').textContent = pct(correct / all.length);
+  $('flag').textContent = pct(flags.reduce((a, b) => a + b, 0) / flags.length);
+  const w = windowAlarm(flags);
+  $('win').innerHTML = `<span class="chip ${w ? 'bad' : 'ok'}">${w ? 'ALARM' : 'quiet'}</span>`;
+}
+
+function select(sample, canvas) {
+  document.querySelectorAll('.gallery canvas').forEach(c => c.classList.remove('sel'));
+  if (canvas) canvas.classList.add('sel');
+  S.current = sample;
+  draw($('view'), sample.pixels);
+  refresh();
+}
+
+async function loadSession(bytes) {
+  S.session = await ort.InferenceSession.create(bytes, { executionProviders: ['wasm'] });
+}
+
+function f32(bytes, offset) { return new DataView(bytes.buffer).getFloat32(offset, true); }
+
+async function inject() {
+  const w = S.manifest.weights[Number($('layer').value)];
+  const bit = Number($('bit').value), n = Math.max(1, Math.min(256, Number($('count').value)));
+  for (let i = 0; i < n; i++) {
+    S.flips.push({ w, index: Math.floor(Math.random() * w.numel), bit });
+  }
+  await rebuild();
+}
+
+async function rebuild() {
+  setBusy(true, 'Rebuilding the model…');
+  const bytes = S.original.slice();
+  const lines = [];
+  for (const f of S.flips) {
+    const at = f.w.offset + 4 * f.index;
+    const before = f32(bytes, at);
+    bytes[at + (f.bit >> 3)] ^= 1 << (f.bit & 7);
+    lines.push(`${f.w.name}[${f.index}] bit ${f.bit}: ${before.toPrecision(4)} → ` +
+               `${f32(bytes, at).toPrecision(4)}`);
+  }
+  await loadSession(bytes);
+  $('flips').textContent = lines.join('\n');
+  const st = $('modelState');
+  st.className = 'chip ' + (S.flips.length ? 'bad' : 'ok');
+  st.textContent = S.flips.length ? `${S.flips.length} bit(s) flipped` : 'Model intact';
+  await refresh();
+  setBusy(false, S.flips.length ? 'Corrupted model is running.' : 'Original model restored.');
+}
+
+function setBusy(b, msg) {
+  S.busy = b;
+  ['inject', 'restore', 'uploadBtn'].forEach(id => $(id).disabled = b);
+  if (msg) $('status').textContent = msg;
+}
+
+async function main() {
+  try {
+    S.manifest = await (await fetch('../manifest.json')).json();
+    S.original = new Uint8Array(await (await fetch('../' + S.manifest.files.model)).arrayBuffer());
+    const raw = await (await fetch('samples.json')).json();
+    S.samples = raw.map(s => ({ label: s.label,
+      pixels: Uint8Array.from(atob(s.pixels), c => c.charCodeAt(0)) }));
+  } catch (e) {
+    $('status').textContent = 'Could not load the model. Open this page through a web server ' +
+      '(python run.py --ui), not by double-clicking the file.';
+    throw e;
+  }
+  const m = S.manifest;
+  m.monitor.alphas.forEach((a, i) => $('alpha').add(new Option(
+    `${(100 * a).toLocaleString()} % of pictures`, i)));
+  $('alpha').value = m.monitor.alphas.indexOf(0.01);
+  S.alpha = Number($('alpha').value);
+  m.weights.forEach((w, i) => $('layer').add(new Option(
+    `${w.name} · ${w.numel.toLocaleString()} numbers`, i)));
+  const preferred = m.weights.findIndex(w => w.name === 'layer1.1.conv1.weight');
+  $('layer').value = preferred >= 0 ? preferred : Math.floor(m.weights.length / 2);
+  $('foot').textContent = `${m.name} · accuracy and false-alarm rates in manifest.json · ` +
+    `${m.caveats[0]}`;
+
+  await loadSession(S.original);
+  const clean = await infer(S.samples.map(s => s.pixels));
+  S.samples.forEach((s, i) => { s.cleanPred = clean[i].pred; });
+  const gal = $('gallery');
+  S.samples.forEach(s => {
+    const c = document.createElement('canvas');
+    c.width = c.height = 32; c.title = s.label;
+    draw(c, s.pixels);
+    c.onclick = () => select(s, c);
+    gal.appendChild(c);
+  });
+  setBusy(false, 'Ready.');
+  select(S.samples[0], gal.firstChild);
+
+  $('alpha').onchange = () => { S.alpha = Number($('alpha').value); refresh(); };
+  $('inject').onclick = inject;
+  $('restore').onclick = () => { S.flips = []; rebuild(); };
+  $('uploadBtn').onclick = () => $('upload').click();
+  $('upload').onchange = async e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    const pixels = await fileToPixels(f);
+    const saved = S.session;
+    await loadSession(S.original);   // the clean answer, to tell whether a fault changed it
+    const [c] = await infer([pixels]);
+    S.session = saved;
+    select({ label: null, pixels, cleanPred: c.pred }, null);
+  };
+}
+setBusy(true);
+main();
+</script>
+</body>
+</html>

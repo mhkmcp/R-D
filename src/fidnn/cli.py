@@ -156,6 +156,8 @@ def main(argv: list[str] | None = None) -> None:
     exp.add_argument("--features-dir", type=Path, default=Path("artifacts/features"))
     exp.add_argument("--detectors-dir", type=Path, default=Path("artifacts/detectors"))
     exp.add_argument("--out", type=Path, default=Path("artifacts/deploy"))
+    exp.add_argument("--no-tflite", action="store_true",
+                     help="skip the TFLite/MCU formats (they need a one-off TensorFlow download)")
 
     for name, milestone in LATER.items():
         sub.add_parser(name, help=f"not implemented until {milestone}")
@@ -205,7 +207,7 @@ def main(argv: list[str] | None = None) -> None:
         from fidnn.deploy import export
         export.run(args.model, args.precision, args.tap_set, args.seed, args.detector,
                    args.data_config, args.data_dir, args.models_dir, args.features_dir,
-                   args.detectors_dir, args.out)
+                   args.detectors_dir, args.out, tflite=not args.no_tflite)
     elif args.cmd == "attack" and args.kind == "bfa":
         from fidnn.attack import run as attack_run
         if not args.report_only:
