@@ -36,9 +36,15 @@ In the UI you can:
 - pick a test picture or upload or photograph your own, and see the answer and the monitor's
   verdict;
 - choose how many false alarms are acceptable: 5 %, 1 % or 0.1 % of pictures on a healthy model;
-- **corrupt the model's memory**: flip a chosen bit in random weights of a chosen layer. You then
-  see whether the answer changes and whether the monitor notices. The file on disk is never
-  touched.
+- **damage the memory**, with the same controls as the research demo:
+  - **Where:** early, middle or late layers.
+  - **Which bit:** sign, exponent top (drastic), exponent low, mantissa high, mantissa low
+    (subtle).
+  - **How many flips:** 1, 4 or 16.
+
+  "Surprise me" picks a random drastic combination, and "Advanced: flip one exact bit" targets a
+  single weight. Flips add up until "Reset model". You then see whether the answer changes and
+  whether the monitor notices. The file on disk is never touched.
 - **see scores on 200 test pictures** (20 per class), recomputed whenever the model changes:
   - **Classifier:** accuracy, plus precision, recall, F1 and F2, macro-averaged and per class.
     Each is shown next to the original model's value.

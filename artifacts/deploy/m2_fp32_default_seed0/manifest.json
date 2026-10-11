@@ -8,7 +8,7 @@
     "ui": "ui/"
   },
   "sha256": {
-    "model": "7b3eb08b616e97a7870a7164545177c87aa14b4879f92462bae3499bfddd584c",
+    "model": "a44f02ef46754673c6f05ec7d06555def0fa4e8c21db4509f9ceaf522a039328",
     "check": "65eb3ec2429f91701766a0aad5f7f046605639df2250bfda453975caa775cd73"
   },
   "input": {
@@ -46,23 +46,23 @@
       "what": "classifier + fault monitor",
       "runtime": "ONNX Runtime",
       "accuracy": 90.95,
-      "latency_ms": 2.5148,
+      "latency_ms": 2.4499,
       "kb": 2634.3,
-      "sha256": "7b3eb08b616e97a7870a7164545177c87aa14b4879f92462bae3499bfddd584c"
+      "sha256": "a44f02ef46754673c6f05ec7d06555def0fa4e8c21db4509f9ceaf522a039328"
     },
     "formats/classifier_fp32.onnx": {
       "what": "classifier only, FP32",
       "runtime": "ONNX Runtime, OpenCV DNN, TensorRT",
       "accuracy": 90.95,
-      "latency_ms": 0.4552,
+      "latency_ms": 0.4712,
       "kb": 1179.8,
-      "sha256": "59672b6e373042b83010d6aa18dddf73ef45eca27f95a001eaac1148687b1e45"
+      "sha256": "97dde4b8d3ae000805daeb1e0696cc5972dd3e6f319c4b31521b4565c4e85fbb"
     },
     "formats/classifier_int8.onnx": {
       "what": "classifier only, static INT8 (QDQ)",
       "runtime": "ONNX Runtime",
       "accuracy": 90.85,
-      "latency_ms": 0.2516,
+      "latency_ms": 0.2454,
       "kb": 399.6,
       "sha256": "9e3091222f7f0eca49f117b434a50939257d479eb01d4a7f30073e8c3a08fda9"
     },
@@ -70,17 +70,17 @@
       "what": "classifier + fault monitor, ORT format",
       "runtime": "ONNX Runtime (incl. minimal builds, mobile)",
       "accuracy": 90.95,
-      "latency_ms": 2.4791,
+      "latency_ms": 2.4788,
       "kb": 2278.1,
-      "sha256": "4f7db79395bde33338197cbf821406af8e2624809a31a072ee2e4995a8b3f9c6"
+      "sha256": "d269a9c8f8e9c0c33d96196d1b6632f98a009755b1ddad9b3dbee09401f043ce"
     },
     "formats/classifier_int8.ort": {
       "what": "classifier only, static INT8 (QDQ), ORT format",
       "runtime": "ONNX Runtime (incl. minimal builds, mobile)",
       "accuracy": 90.85,
-      "latency_ms": 0.2624,
+      "latency_ms": 0.2513,
       "kb": 371.9,
-      "sha256": "a00a6a590178dc45a8435c5806702802d8d2df4a89ebb6576d3b1a83140cb2ae"
+      "sha256": "540471407060021ad1d606c83f383b52158b85f7355b9a585ee6e42ea6df0dc9"
     },
     "formats/classifier_fp32.tflite": {
       "what": "classifier only, FP32",
@@ -194,6 +194,7 @@
   "weights": [
     {
       "name": "conv1.weight",
+      "bucket": "early",
       "offset": 680375,
       "numel": 432,
       "shape": [
@@ -205,6 +206,7 @@
     },
     {
       "name": "layer1.0.conv1.weight",
+      "bucket": "early",
       "offset": 682148,
       "numel": 2304,
       "shape": [
@@ -216,6 +218,7 @@
     },
     {
       "name": "layer1.0.conv2.weight",
+      "bucket": "early",
       "offset": 691409,
       "numel": 2304,
       "shape": [
@@ -227,6 +230,7 @@
     },
     {
       "name": "layer1.1.conv1.weight",
+      "bucket": "early",
       "offset": 700670,
       "numel": 2304,
       "shape": [
@@ -238,6 +242,7 @@
     },
     {
       "name": "layer1.1.conv2.weight",
+      "bucket": "early",
       "offset": 709931,
       "numel": 2304,
       "shape": [
@@ -249,6 +254,7 @@
     },
     {
       "name": "layer1.2.conv1.weight",
+      "bucket": "early",
       "offset": 719192,
       "numel": 2304,
       "shape": [
@@ -260,6 +266,7 @@
     },
     {
       "name": "layer1.2.conv2.weight",
+      "bucket": "early",
       "offset": 728453,
       "numel": 2304,
       "shape": [
@@ -271,6 +278,7 @@
     },
     {
       "name": "layer2.0.conv1.weight",
+      "bucket": "middle",
       "offset": 737716,
       "numel": 4608,
       "shape": [
@@ -282,6 +290,7 @@
     },
     {
       "name": "layer2.0.conv2.weight",
+      "bucket": "middle",
       "offset": 756195,
       "numel": 9216,
       "shape": [
@@ -293,6 +302,7 @@
     },
     {
       "name": "layer2.1.conv1.weight",
+      "bucket": "middle",
       "offset": 793106,
       "numel": 9216,
       "shape": [
@@ -304,6 +314,7 @@
     },
     {
       "name": "layer2.1.conv2.weight",
+      "bucket": "middle",
       "offset": 830017,
       "numel": 9216,
       "shape": [
@@ -315,6 +326,7 @@
     },
     {
       "name": "layer2.2.conv1.weight",
+      "bucket": "middle",
       "offset": 866928,
       "numel": 9216,
       "shape": [
@@ -326,6 +338,7 @@
     },
     {
       "name": "layer2.2.conv2.weight",
+      "bucket": "middle",
       "offset": 903839,
       "numel": 9216,
       "shape": [
@@ -337,6 +350,7 @@
     },
     {
       "name": "layer3.0.conv1.weight",
+      "bucket": "late",
       "offset": 940750,
       "numel": 18432,
       "shape": [
@@ -348,6 +362,7 @@
     },
     {
       "name": "layer3.0.conv2.weight",
+      "bucket": "late",
       "offset": 1014525,
       "numel": 36864,
       "shape": [
@@ -359,6 +374,7 @@
     },
     {
       "name": "layer3.1.conv1.weight",
+      "bucket": "late",
       "offset": 1162028,
       "numel": 36864,
       "shape": [
@@ -370,6 +386,7 @@
     },
     {
       "name": "layer3.1.conv2.weight",
+      "bucket": "late",
       "offset": 1309531,
       "numel": 36864,
       "shape": [
@@ -381,6 +398,7 @@
     },
     {
       "name": "layer3.2.conv1.weight",
+      "bucket": "late",
       "offset": 1457034,
       "numel": 36864,
       "shape": [
@@ -392,6 +410,7 @@
     },
     {
       "name": "layer3.2.conv2.weight",
+      "bucket": "late",
       "offset": 1604537,
       "numel": 36864,
       "shape": [
@@ -403,6 +422,7 @@
     },
     {
       "name": "fc.weight",
+      "bucket": "late",
       "offset": 1752022,
       "numel": 640,
       "shape": [
@@ -411,6 +431,91 @@
       ]
     }
   ],
+  "faults": {
+    "buckets": [
+      {
+        "key": "early",
+        "label": "Early layers"
+      },
+      {
+        "key": "middle",
+        "label": "Middle layers"
+      },
+      {
+        "key": "late",
+        "label": "Late layers"
+      }
+    ],
+    "strata": [
+      {
+        "key": "sign",
+        "label": "Sign bit",
+        "bits": [
+          31
+        ]
+      },
+      {
+        "key": "exp_msb",
+        "label": "Exponent, top \u2014 drastic",
+        "bits": [
+          30,
+          29,
+          28,
+          27
+        ]
+      },
+      {
+        "key": "exp_low",
+        "label": "Exponent, low",
+        "bits": [
+          26,
+          25,
+          24,
+          23
+        ]
+      },
+      {
+        "key": "mant_high",
+        "label": "Mantissa, high",
+        "bits": [
+          22,
+          21,
+          20,
+          19,
+          18,
+          17,
+          16
+        ]
+      },
+      {
+        "key": "mant_low",
+        "label": "Mantissa, low \u2014 subtle",
+        "bits": [
+          15,
+          14,
+          13,
+          12,
+          11,
+          10,
+          9,
+          8,
+          7,
+          6,
+          5,
+          4,
+          3,
+          2,
+          1,
+          0
+        ]
+      }
+    ],
+    "budgets": [
+      1,
+      4,
+      16
+    ]
+  },
   "check": {
     "n": 16,
     "score_tolerance": 0.1,
@@ -428,9 +533,9 @@
     "device": "cpu",
     "runtime": "onnxruntime 1.30.0",
     "batch": 1,
-    "classifier_ms": 0.4552,
-    "monitored_ms": 2.5148,
-    "added_latency_pct": 452.5,
+    "classifier_ms": 0.4712,
+    "monitored_ms": 2.4499,
+    "added_latency_pct": 419.9,
     "measured_on": "export host \u2014 re-measure on the target device"
   },
   "ui": {
@@ -539,7 +644,7 @@
     "The clean false-alarm rate holds only for inputs like the calibration data.",
     "Only model.onnx / model.ort carry the monitor; formats/classifier_* do not."
   ],
-  "git_commit": "4c6cabc5c35b89ca32650c707df0ad3427966075-dirty",
+  "git_commit": "a4d2f37238e8e34ae184399e8b1cc0177bdc863c-dirty",
   "config_hash": "f2710519582114ee",
   "config": {
     "model": "m2",
@@ -552,9 +657,9 @@
   "device": "cpu",
   "versions": {
     "python": "3.11.16",
-    "torch": "2.14.0",
+    "torch": "2.14.1",
     "numpy": "2.4.6",
     "sklearn": "1.7.2"
   },
-  "timestamp": "2026-10-06T21:47:11+0600"
+  "timestamp": "2026-10-11T22:00:08+0600"
 }

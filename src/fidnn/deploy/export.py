@@ -17,9 +17,12 @@ from onnx import numpy_helper
 
 from fidnn.data.cifar10 import CLASSES
 from fidnn.data.prepare import load_arrays, model_classes, subset_classes
+from fidnn.demo.app import SEVERITY, WHERE
 from fidnn.deploy import formats
 from fidnn.deploy.graph import MonitoredClassifier
 from fidnn.detect.features import CleanFeatures, from_frame
+from fidnn.inject.plan import STRATA
+from fidnn.inject.targets import BUCKET_OF, FAMILY
 from fidnn.models.checkpoint import load, manifest_entry
 from fidnn.models.registry import MODELS, config_path
 from fidnn.provenance import sidecar
@@ -33,6 +36,7 @@ SCORE_TOL = 0.1  # FP32 kernel rounding between PyTorch and ORT; the decision is
 ORT_WEB = "1.30.0"
 ORT_WEB_FILES = ("ort.wasm.min.js", "ort-wasm-simd-threaded.mjs", "ort-wasm-simd-threaded.wasm")
 CALIB_N = 512  # same clean_fit subsample size as `fidnn quantize`
+BUDGETS = (1, 4, 16)  # flips per injection, the §4.2 grid's budgets (`inject.plan.plan`)
 
 
 def _sha256(path: Path) -> str:
@@ -55,21 +59,33 @@ def _ort_web(cache: Path, dest: Path) -> dict:
     return hashes
 
 
-def _weight_table(path: Path) -> list[dict]:
-    """Byte offset of each classifier weight's raw data inside the file, for in-browser flips."""
+def _weight_table(path: Path, model_id: str) -> list[dict]:
+    """Byte offset and SPEC §4.2 bucket of each weight's raw data, for in-browser flips."""
     raw = path.read_bytes()
+    buckets = BUCKET_OF[FAMILY[model_id]]
     table = []
     for init in onnx.load(path).graph.initializer:
         w = numpy_helper.to_array(init)
-        if not init.name.startswith("model.") or w.dtype != np.float32 or w.ndim < 2:
+        name = init.name.removeprefix("model.")
+        bucket = buckets.get(name.split(".")[0])
+        if (not init.name.startswith("model.") or not name.endswith(".weight")
+                or w.dtype != np.float32 or bucket is None):
             continue
         data = w.astype("<f4").tobytes()
         offset = raw.find(data)
         if offset < 0 or raw.find(data, offset + 1) >= 0:
             continue  # not stored contiguously, or ambiguous: leave it out rather than guess
-        table.append({"name": init.name.removeprefix("model."), "offset": offset,
+        table.append({"name": name, "bucket": bucket, "offset": offset,
                       "numel": int(w.size), "shape": list(w.shape)})
     return table
+
+
+def _fault_controls() -> dict:
+    """The §4.2 grid in the demo's plain words: buckets, FP32 bit strata, budgets."""
+    return {"buckets": [{"key": b, "label": label} for label, b in WHERE.items()],
+            "strata": [{"key": s, "label": label, "bits": STRATA[32][s]}
+                       for label, s in SEVERITY[32].items()],
+            "budgets": list(BUDGETS)}
 
 
 def _balanced(y: np.ndarray, per_class: int) -> np.ndarray:
@@ -237,7 +253,8 @@ def run(model_id: str, precision: str, tap_set: str, seed: int, detector: str, d
                     "svdd": {"nu": d2.selection.nu, "gamma": float(d2.model._gamma),
                              "support_vectors": int(d2.model.support_vectors_.shape[0])},
                     "only_in": "model.onnx and formats/model.ort"},
-        "weights": _weight_table(model_path),
+        "weights": _weight_table(model_path, model_id),
+        "faults": _fault_controls(),
         "check": {"n": CHECK_N, "score_tolerance": SCORE_TOL,
                   "onnx_vs_fidnn": {"n": len(x), "alarm_agreement": agree,
                                     "max_score_error": score_err}},

@@ -7,6 +7,8 @@
     python run.py --model formats/classifier_int8.onnx photo.png   # classifier only, no monitor
 """
 
+from __future__ import annotations
+
 import argparse
 import hashlib
 import json
@@ -14,9 +16,15 @@ import sys
 from collections import deque
 from pathlib import Path
 
-import numpy as np
+try:  # --ui runs on the standard library alone; everything else needs requirements.txt
+    import numpy as np
+except ImportError:
+    np = None
 
 HERE = Path(__file__).resolve().parent
+INSTALL_HINT = ("this needs the packages in requirements.txt:\n"
+                f"    pip install -r {HERE / 'requirements.txt'}\n"
+                "(the browser UI does not: python run.py --ui)")
 
 
 def serve_ui(host: str, port: int) -> int:
@@ -120,6 +128,14 @@ def main(argv=None) -> int:
 
     if args.ui:
         return serve_ui(args.host, args.port)
+    try:
+        import onnxruntime  # noqa: F401
+    except ImportError:
+        np_missing = True
+    else:
+        np_missing = np is None
+    if np_missing:
+        raise SystemExit(f"run.py: {INSTALL_HINT}")
     mon = Monitor(args.model)
     if args.selftest:
         return 0 if selftest(mon) else 1

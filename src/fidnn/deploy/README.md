@@ -69,4 +69,17 @@ Output: `artifacts/deploy/{model}_{precision}_{tap_set}_seed{n}/` and a `.zip` o
 - **Browser fault simulation** flips bytes at the offsets in `manifest.weights`. Those are the
   positions of each FP32 weight's raw data inside `model.onnx`, recorded only when the bytes
   occur exactly once.
+- **The UI's fault controls are the §4.2 grid, not a copy of it.** `manifest.faults` is generated
+  from the same sources the experiments use:
+  - layer buckets from `inject.targets.BUCKET_OF`;
+  - FP32 bit strata from `inject.plan.STRATA[32]`, with the plain-language labels from
+    `demo.app.SEVERITY`;
+  - budgets 1/4/16.
+
+  The page's `sampleFlips` mirrors `inject.plan.sample_flips`: distinct (element, bit) pairs
+  across the bucket's weights. Its flip accumulation and "Surprise me" mirror `DemoSession`.
+- **Weights in `model.onnx` are BN-folded.** The ONNX export folds each BatchNorm into the
+  preceding convolution, so `model.onnx` has no separate γ tensors. A browser flip therefore hits
+  `w·γ/√(σ²+ε)` rather than the raw conv weight. That is the right target for a deployed model,
+  but not identical to a `fidnn inject` flip.
 - **The m-of-n window is stateful**, so it lives in `run.py` and the UI, not in the graph.

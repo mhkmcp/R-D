@@ -60,7 +60,16 @@
   button { cursor: pointer; }
   button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
   button:disabled { opacity: .5; cursor: default; }
-  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .choice-group { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px;
+                  margin-top: 10px; }
+  .glabel { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+  .choices { display: flex; flex-wrap: wrap; gap: 8px; }
+  .choices label { display: inline-flex; align-items: center; gap: 8px; margin: 0;
+                   padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px;
+                   color: var(--ink); font-size: 14px; cursor: pointer; }
+  .choices input { accent-color: #f97316; margin: 0; }
+  .choices label:has(input:checked) { border-color: #f97316; }
   .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
            gap: 10px; }
   .tile { border: 1px solid var(--line); border-radius: 10px; padding: 10px; }
@@ -130,29 +139,35 @@
   </section>
 
   <section class="card full">
-    <h2>3 · Corrupt the model's memory</h2>
+    <h2>3 · Damage the memory</h2>
     <p class="muted" style="margin-top:0">This flips bits in a copy of the model's weights, the
       way a memory fault or a bit-flip attack would. The file on disk is never changed.</p>
-    <div class="grid2">
-      <div><label for="layer">Layer</label><select id="layer" style="width:100%"></select></div>
-      <div><label for="bit">Which bit of the 32-bit number</label>
-        <select id="bit" style="width:100%">
-          <option value="30">bit 30 · top exponent bit (usually severe)</option>
-          <option value="31">bit 31 · sign</option>
-          <option value="27">bit 27 · middle exponent bit</option>
-          <option value="23">bit 23 · lowest exponent bit</option>
-          <option value="22">bit 22 · top mantissa bit</option>
-          <option value="3">bit 3 · low mantissa bit (usually harmless)</option>
-        </select></div>
-    </div>
-    <div class="row" style="margin-top:10px">
-      <label style="margin:0">How many weights
-        <input type="number" id="count" value="1" min="1" max="256" style="width:80px"></label>
+    <div class="choice-group"><div class="glabel">Where</div>
+      <div class="choices" id="where"></div></div>
+    <div class="choice-group"><div class="glabel">Which bit</div>
+      <div class="choices" id="how"></div></div>
+    <div class="choice-group"><div class="glabel">How many flips</div>
+      <div class="choices" id="count"></div></div>
+    <div class="row" style="margin-top:12px">
       <button class="primary" id="inject">Flip bits</button>
-      <button id="restore">Restore the original model</button>
+      <button id="surprise">Surprise me</button>
+      <button id="restore">Reset model</button>
       <span class="chip ok" id="modelState">Model intact</span>
     </div>
     <div class="flips" id="flips"></div>
+    <details>
+      <summary>Advanced: flip one exact bit</summary>
+      <div class="grid3" style="margin-top:10px">
+        <div><label for="layer">Layer</label><select id="layer" style="width:100%"></select></div>
+        <div><label for="index">Weight index</label>
+          <input type="number" id="index" value="0" min="0" style="width:100%"></div>
+        <div><label for="bit">Bit (0 = lowest, 31 = sign)</label>
+          <input type="number" id="bit" value="30" min="0" max="31" style="width:100%"></div>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button id="exact">Flip this bit</button><span class="muted" id="exactErr"></span>
+      </div>
+    </details>
     <div class="muted" id="status">Loading model…</div>
   </section>
 
@@ -405,11 +420,65 @@ async function loadSession(bytes) {
 
 function f32(bytes, offset) { return new DataView(bytes.buffer).getFloat32(offset, true); }
 
-async function inject() {
+const picked = name => document.querySelector(`input[name="${name}"]:checked`).value;
+const randInt = n => Math.floor(Math.random() * n);
+
+// `inject.plan.sample_flips`: `budget` distinct (element, bit) pairs over the bucket's weights
+function sampleFlips(pool, bits, budget) {
+  const ends = [];
+  let total = 0;
+  for (const w of pool) { total += w.numel; ends.push(total); }
+  const draws = new Set();
+  while (draws.size < Math.min(budget, total * bits.length)) draws.add(randInt(total * bits.length));
+  return [...draws].map(p => {
+    const flat = Math.floor(p / bits.length), k = ends.findIndex(e => flat < e);
+    return { w: pool[k], index: flat - (k ? ends[k - 1] : 0), bit: bits[p % bits.length] };
+  });
+}
+
+// `DemoSession._extend`: flips accumulate until Reset; one (weight, index, bit) is flipped once
+async function addFlips(fresh) {
+  const seen = new Set(S.flips.map(f => `${f.w.name}|${f.index}|${f.bit}`));
+  const added = fresh.filter(f => !seen.has(`${f.w.name}|${f.index}|${f.bit}`));
+  S.flips.push(...added);
+  if (added.length) await rebuild();
+}
+
+function injectGrid(bucket, stratumKey, budget) {
+  const f = S.manifest.faults, stratum = f.strata.find(s => s.key === stratumKey);
+  const pool = S.manifest.weights.filter(w => w.bucket === bucket);
+  return addFlips(sampleFlips(pool, stratum.bits, budget));
+}
+
+function inject() { return injectGrid(picked('where'), picked('how'), Number(picked('count'))); }
+
+function surprise() {  // as in `fidnn ui`: random place, one of the two most drastic strata, 4 flips
+  const f = S.manifest.faults;
+  const b = f.buckets[randInt(f.buckets.length)].key, s = f.strata[randInt(2)].key;
+  document.querySelector(`input[name="where"][value="${b}"]`).checked = true;
+  document.querySelector(`input[name="how"][value="${s}"]`).checked = true;
+  document.querySelector('input[name="count"][value="4"]').checked = true;
+  return injectGrid(b, s, 4);
+}
+
+function exact() {
   const w = S.manifest.weights[Number($('layer').value)];
-  const bit = Number($('bit').value), n = Math.max(1, Math.min(256, Number($('count').value)));
-  for (let i = 0; i < n; i++) S.flips.push({ w, index: Math.floor(Math.random() * w.numel), bit });
-  await rebuild();
+  const index = Number($('index').value), bit = Number($('bit').value);
+  if (!Number.isInteger(index) || index < 0 || index >= w.numel) {
+    $('exactErr').textContent = `Weight index must be 0 … ${w.numel - 1} for ${w.name}.`;
+    return;
+  }
+  if (!Number.isInteger(bit) || bit < 0 || bit > 31) {
+    $('exactErr').textContent = 'Bit must be 0 … 31.';
+    return;
+  }
+  $('exactErr').textContent = '';
+  return addFlips([{ w, index, bit }]);
+}
+
+function radios(id, name, options, value) {
+  $(id).innerHTML = options.map(o => `<label><input type="radio" name="${name}" ` +
+    `value="${o.value}"${o.value === value ? ' checked' : ''}>${o.label}</label>`).join('');
 }
 
 async function rebuild() {
@@ -433,7 +502,7 @@ async function rebuild() {
 }
 
 function setBusy(b, msg) {
-  ['inject', 'restore', 'uploadBtn'].forEach(id => $(id).disabled = b);
+  ['inject', 'surprise', 'restore', 'exact', 'uploadBtn'].forEach(id => $(id).disabled = b);
   if (msg) $('status').textContent = msg;
 }
 
@@ -456,9 +525,12 @@ async function main() {
   $('alpha').value = m.monitor.alphas.indexOf(0.01);
   S.alpha = Number($('alpha').value);
   m.weights.forEach((w, i) => $('layer').add(new Option(
-    `${w.name} · ${w.numel.toLocaleString()} numbers`, i)));
-  const preferred = m.weights.findIndex(w => w.name === 'layer1.1.conv1.weight');
-  $('layer').value = preferred >= 0 ? preferred : Math.floor(m.weights.length / 2);
+    `${w.name} · ${w.bucket} · ${w.numel.toLocaleString()} numbers`, i)));
+  radios('where', 'where', m.faults.buckets.map(b => ({ value: b.key, label: b.label })), 'late');
+  radios('how', 'how', m.faults.strata.map(s => ({ value: s.key, label: s.label })),
+         m.faults.strata[0].key);
+  radios('count', 'count', m.faults.budgets.map(n => ({ value: String(n), label: String(n) })),
+         String(m.faults.budgets[0]));
   $('nSamples').textContent = S.samples.length;
   $('foot').textContent = `${m.name} · ${m.caveats[0]}`;
   const ref = m.metrics;
@@ -490,6 +562,8 @@ async function main() {
 
   $('alpha').onchange = () => { S.alpha = Number($('alpha').value); renderScores(); refreshImage(); };
   $('inject').onclick = inject;
+  $('surprise').onclick = surprise;
+  $('exact').onclick = exact;
   $('restore').onclick = () => { S.flips = []; rebuild(); };
   $('uploadBtn').onclick = () => $('upload').click();
   $('upload').onchange = async e => {
